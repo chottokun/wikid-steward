@@ -480,7 +480,7 @@ wheels = [
 [[package]]
 name = "docling-lib"
 version = "0.1.0"
-source = { git = "https://github.com/chottokun/docling-markdown-generator.git#46da5fab59bcb07a9ced01e19ec564cddf14f21c" }
+source = { git = "https://github.com/chottokun/docling-markdown-generator.git#c7216a07a84ac65aa9365ced9e3eb208f7bcc693" }
 dependencies = [
     { name = "aiofiles" },
     { name = "docling" },
