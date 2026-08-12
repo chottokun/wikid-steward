@@ -222,11 +222,13 @@ __marimo__/
 # local
 plan/
 
-# LLM Wiki Lifecycles & Temporary Directories
+# LLM Wiki Lifecycles & Temporary Isolation Directories
 _raw/
 raw_sources/
 staging/
 scratch/
+test_output/
+test_wiki/
 
 # Binary documents & raw media files (Strictly excluded from Git)
 *.pdf
