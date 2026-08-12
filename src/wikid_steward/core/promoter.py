@@ -61,9 +61,27 @@ def promote_document(
     wiki_base = base / "wiki"
     target_note = wiki_base / rel_path
 
-    # アセットフォルダパスの特定
+    # アセットフォルダパスの特定 (Frontmatter の id または stem から取得)
     slug = note_path.stem
+    try:
+        content = note_path.read_text(encoding="utf-8")
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                meta = yaml.safe_load(parts[1]) or {}
+                if "id" in meta:
+                    slug = meta["id"]
+    except Exception:
+        pass
+
     staging_assets = note_path.parent / "assets" / slug
+    if not staging_assets.exists():
+        # 代替サーチ: staging 配下の assets から slug に合致するディレクトリを検索
+        for possible_asset in note_path.parent.glob(f"**/assets/{slug}"):
+            if possible_asset.is_dir():
+                staging_assets = possible_asset
+                break
+
     target_assets = target_note.parent / "assets" / slug
 
     # ターゲットディレクトリの準備
@@ -97,7 +115,7 @@ def promote_document(
         extractor = GlossaryExtractor()
         terms = extractor.extract_terms(content)
 
-        glossary_dir = target_base / "glossary"
+        glossary_dir = wiki_base / "glossary"
         for term in terms:
             extractor.create_glossary_note(term, glossary_dir)
 

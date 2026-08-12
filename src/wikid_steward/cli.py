@@ -79,5 +79,51 @@ def search(query: str, dir: Path, top_k: int):
     click.echo("=" * 60 + "\n")
 
 
+@main.command()
+@click.option(
+    "--dir",
+    "-d",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path.cwd(),
+    help="Target base directory",
+)
+def moc(dir: Path):
+    """Generate dynamic Map of Content (index.md) for all categories in wiki/"""
+    wiki_dir = dir / "wiki"
+    click.echo(f"🗺️ Generating dynamic MOCs for {wiki_dir}...")
+    from wikid_steward.core.moc_generator import generate_all_mocs
+
+    mocs = generate_all_mocs(wiki_dir)
+    click.echo(f"✅ Generated {len(mocs)} MOC files:")
+    for m in mocs:
+        click.echo(f"  - {m.relative_to(dir)}")
+
+
+@main.command()
+@click.option(
+    "--dir",
+    "-d",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path.cwd(),
+    help="Target base directory",
+)
+def lint(dir: Path):
+    """Lint and verify integrity of wiki/ knowledge base"""
+    wiki_dir = dir / "wiki"
+    click.echo(f"🛡️ Running Knowledge Lint & Self-Healing audit for {wiki_dir}...")
+    from wikid_steward.core.linter import KnowledgeLinter
+
+    linter = KnowledgeLinter(wiki_dir)
+    report = linter.run_lint()
+
+    click.echo(f"Scanned {report.total_files} files.")
+    if report.is_healthy:
+        click.echo("🎉 HEALTHY! 0 issues found in knowledge base.")
+    else:
+        click.echo(f"⚠️ Found {len(report.issues)} issue(s):")
+        for issue in report.issues:
+            click.echo(f"  - [{issue.issue_type}] {issue.file_path}: {issue.message}")
+
+
 if __name__ == "__main__":
     main()
