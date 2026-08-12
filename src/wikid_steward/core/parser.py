@@ -16,6 +16,7 @@ class KnowledgeParser:
     """
 
     def __init__(self, device: str = "cpu"):
+        self.device = device
         # PDF パイプライン設定
         pdf_options = PdfPipelineOptions()
 
@@ -61,6 +62,15 @@ class KnowledgeParser:
 
         if profile is not None:
             pdf_options = PdfPipelineOptions()
+            acc_device = (
+                AcceleratorDevice.CUDA
+                if self.device.lower() == "cuda"
+                else AcceleratorDevice.CPU
+            )
+            pdf_options.accelerator_options = AcceleratorOptions(
+                device=acc_device
+            )
+
             pdf_options.do_ocr = profile.do_ocr
             pdf_options.images_scale = profile.images_scale
             pdf_options.do_table_structure = True

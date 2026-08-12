@@ -91,6 +91,7 @@ class RawFolderHandler(FileSystemEventHandler):
             )
 
             # 画像出力・【層B】メタデータ埋め込み
+            extracted_image_names = []
             if hasattr(conv_result.document, "pictures"):
                 for i, pic in enumerate(conv_result.document.pictures):
                     img_name = f"fig{i + 1}.png"
@@ -106,6 +107,7 @@ class RawFolderHandler(FileSystemEventHandler):
                             "page_number": getattr(pic, "page_no", 1),
                         }
                         embed_png_metadata(img_path, meta_payload)
+                        extracted_image_names.append(img_name)
 
             # 3. OKF 【層A】 Frontmatter 付与 (トレーサビリティプロパティ追加) & Markdown 置換
             frontmatter = generate_okf_frontmatter(
@@ -117,7 +119,9 @@ class RawFolderHandler(FileSystemEventHandler):
                 profile_source=prof_source,
                 custom_metadata=custom_meta,
             )
-            body = replace_image_links(doc_md, slug)
+            body = replace_image_links(
+                doc_md, slug, extracted_image_names=extracted_image_names
+            )
             final_content = f"{frontmatter}\n{body}"
 
             # 4. staging/ への配置

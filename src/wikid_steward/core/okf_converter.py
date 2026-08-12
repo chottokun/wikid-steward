@@ -56,29 +56,51 @@ def generate_okf_frontmatter(
     return f"---\n{yaml_str}---\n"
 
 
-def replace_image_links(markdown_content: str, slug: str) -> str:
-    """Markdown 内の画像リンクを Obsidian 互換の 'assets/{slug}/{画像名}.png' 相対リンクに置換する。
+def replace_image_links(
+    markdown_content: str,
+    slug: str,
+    extracted_image_names: list[str] | None = None,
+) -> str:
+    """Markdown 内の画像リンクを Obsidian 互換の 'assets/{slug}/{画像名}' 相対リンクに置換し、
+
+    本文中に埋め込みが無い場合は抽出された画像アセットリンクを本文に埋め込む。
 
     Args:
         markdown_content: doclingから抽出されたMarkdown本文
         slug: ファイルのスラッグ名
+        extracted_image_names: 抽出された画像ファイル名のリスト (例: ['fig1.png', 'fig2.png'])
 
     Returns:
-        置換済みのMarkdown本文
+        画像リンクが埋め込まれたMarkdown本文
     """
 
     def _replace_match(match: re.Match) -> str:
         alt_text = match.group(1) or ""
         img_path = match.group(2) or ""
-
-        # 画像ファイル名の抽出 (例: /tmp/docling/fig1.png -> fig1.png)
         img_name = img_path.split("/")[-1].split("\\")[-1]
-
-        # 唯一ルール: assets/{slug}/{img_name}
         return f"![[assets/{slug}/{img_name}]]"
 
-    # Markdown 標準画像記法 ! [alt] (path) の検索パターン
+    # 1. 標準の Markdown 画像記法 ![alt](path) の置換
     pattern = r"\!\[(.*?)\]\((.*?)\)"
     replaced_md = re.sub(pattern, _replace_match, markdown_content)
+
+    # 2. 本文中に画像リンクが含まれず、抽出された画像アセットが存在する場合の自動埋め込み
+    if extracted_image_names:
+        missing_images = []
+        for img_name in extracted_image_names:
+            if f"assets/{slug}/{img_name}" not in replaced_md:
+                missing_images.append(img_name)
+
+        if missing_images:
+            image_embed_blocks = []
+            for img_name in missing_images:
+                embed_code = (
+                    f"\n\n![[assets/{slug}/{img_name}]]\n"
+                    f"> [!info] 📷 抽出図表アセット ({img_name})\n"
+                )
+                image_embed_blocks.append(embed_code)
+
+            # 本文末尾（または参照位置）に画像リンクブロックを自動統合
+            replaced_md += "\n\n## 📊 抽出図表・画像アセット\n" + "".join(image_embed_blocks)
 
     return replaced_md
