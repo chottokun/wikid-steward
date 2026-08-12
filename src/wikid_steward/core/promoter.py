@@ -88,6 +88,25 @@ def promote_document(
     # 3. 物理移動: staging/ -> wiki/ (Markdown)
     shutil.move(note_path, target_note)
 
+    # 用語自動抽出 & WikiLink バインドフック
+    try:
+        from wikid_steward.core.glossary import GlossaryExtractor
+        from wikid_steward.core.relinker import WikiRelinker
+
+        content = target_note.read_text(encoding="utf-8")
+        extractor = GlossaryExtractor()
+        terms = extractor.extract_terms(content)
+
+        glossary_dir = target_base / "glossary"
+        for term in terms:
+            extractor.create_glossary_note(term, glossary_dir)
+
+        relinker = WikiRelinker()
+        relinked_content, _ = relinker.relink_text(content, terms)
+        target_note.write_text(relinked_content, encoding="utf-8")
+    except Exception as e:
+        print(f"Glossary / Relinker promotion hook warning: {e}")
+
     # 4. 物理移動: staging/ -> wiki/ (Assets)
     if staging_assets.exists():
         shutil.move(staging_assets, target_assets)

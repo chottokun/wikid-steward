@@ -1,0 +1,71 @@
+# wikid-steward 網羅的統合設定ファイル (config.yaml)
+
+# 1. LLM 接続設定 (OpenAI 互換 API)
+llm:
+  provider: "ollama"
+  base_url: "http://localhost:11434/v1"
+  api_key: "ollama"
+  model: "gemma4:latest"
+  temperature: 0.2
+  max_tokens: 2048
+
+# 2. VLM 画像日本語自動要約設定
+vlm:
+  enabled: true
+  provider: "ollama"
+  model: "qwen3.5:4b"
+  endpoint: "http://localhost:11434"
+  prompt: "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
+
+# 3. 4層ライフサイクル・ディレクトリ構成設定
+paths:
+  raw_dir: "_raw"
+  raw_sources_dir: "raw_sources"
+  staging_dir: "staging"
+  wiki_dir: "wiki"
+
+# 4. パースプロファイル設定 (3層ポリシー制御)
+profiles:
+  paper:
+    doc_type: "Academic Paper"
+    do_ocr: false
+    images_scale: 2.0
+    table_mode: "accurate"
+  drawing:
+    doc_type: "Technical Drawing"
+    do_ocr: true
+    images_scale: 3.0
+    table_mode: "accurate"
+  spreadsheet:
+    doc_type: "Data Sheet"
+    do_ocr: false
+    images_scale: 2.0
+    table_mode: "accurate"
+  presentation:
+    doc_type: "Presentation"
+    do_ocr: false
+    images_scale: 2.0
+    table_mode: "accurate"
+
+# 5. 用語抽出 & 相互 WikiLink 防護設定 (Relinker & Glossary)
+relinker:
+  stop_words:
+    - "AI"
+    - "NLP"
+    - "LLM"
+    - "LLMS"
+    - "DATA"
+    - "OUTPUT"
+    - "FILE"
+    - "PDF"
+    - "PAPER"
+    - "MODEL"
+    - "SYSTEM"
+  min_term_length: 3
+
+# 6. ベクトル DB (Qdrant) & グラフ拡張検索設定
+vector_db:
+  provider: "qdrant"
+  url: "http://localhost:6333"
+  collection_name: "wikid_steward_knowledge"
+  max_context_tokens: 4000
