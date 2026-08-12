@@ -4,6 +4,7 @@ import time
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+from wikid_steward.core.handlers import get_profile_handler
 from wikid_steward.core.metadata_embedder import (
     embed_png_metadata,
     prepare_clean_assets_dir,
@@ -77,7 +78,11 @@ class RawFolderHandler(FileSystemEventHandler):
         try:
             # 1. Docling パースの実行 (プロファイル設定を反映)
             conv_result = self.parser.parse(file_path, profile=profile)
-            doc_md = conv_result.document.export_to_markdown()
+            raw_md = conv_result.document.export_to_markdown()
+
+            # パターン別カスタムハンドラーによる独自処理コードの適用
+            handler = get_profile_handler(profile.name)
+            doc_md = handler.post_process_markdown(raw_md, profile.name)
 
             # 2. アセットクリーンアップと画像埋め込み
             staging_note_dir = self.staging_dir / rel_path.parent
