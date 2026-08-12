@@ -78,11 +78,21 @@ def replace_image_links(
         alt_text = match.group(1) or "Image"
         img_path = match.group(2) or ""
         img_name = img_path.split("/")[-1].split("\\")[-1]
-        return f"![{alt_text}](assets/{slug}/{img_name})"
+        # 決定論的 slug 名を絶対維持した相対パスを構築
+        return f"![{img_name}](assets/{slug}/{img_name})"
 
-    # 1. 標準の Markdown 画像記法 ![alt](path) の置換
-    pattern = r"\!\[(.*?)\]\((.*?)\)"
-    replaced_md = re.sub(pattern, _replace_match, markdown_content)
+    # 1. 標準の Markdown 画像記法 ![alt](path) および Obsidian 記法 ![[path]] の検索・置換
+    pattern_md = r"\!\[(.*?)\]\((.*?)\)"
+    pattern_wiki = r"\!\[\[(.*?)\]\]"
+
+    replaced_md = re.sub(pattern_md, _replace_match, markdown_content)
+
+    def _replace_wiki(match: re.Match) -> str:
+        img_path = match.group(1) or ""
+        img_name = img_path.split("/")[-1].split("\\")[-1]
+        return f"![{img_name}](assets/{slug}/{img_name})"
+
+    replaced_md = re.sub(pattern_wiki, _replace_wiki, replaced_md)
 
     # 2. 本文中に画像リンクが含まれず、抽出された画像アセットが存在する場合の自動埋め込み
     if extracted_image_names:
