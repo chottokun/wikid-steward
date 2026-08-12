@@ -30,5 +30,5 @@ def test_replace_image_links():
     slug = "project-a_dwg-1"
     result = replace_image_links(markdown, slug)
 
-    assert "![[assets/project-a_dwg-1/fig1.png]]" in result
-    assert "![[assets/project-a_dwg-1/fig2.png]]" in result
+    assert "![Image](assets/project-a_dwg-1/fig1.png)" in result
+    assert "![Image](assets/project-a_dwg-1/fig2.png)" in result

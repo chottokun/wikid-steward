@@ -75,10 +75,10 @@ def replace_image_links(
     """
 
     def _replace_match(match: re.Match) -> str:
-        alt_text = match.group(1) or ""
+        alt_text = match.group(1) or "Image"
         img_path = match.group(2) or ""
         img_name = img_path.split("/")[-1].split("\\")[-1]
-        return f"![[assets/{slug}/{img_name}]]"
+        return f"![{alt_text}](assets/{slug}/{img_name})"
 
     # 1. 標準の Markdown 画像記法 ![alt](path) の置換
     pattern = r"\!\[(.*?)\]\((.*?)\)"
@@ -95,7 +95,7 @@ def replace_image_links(
             image_embed_blocks = []
             for img_name in missing_images:
                 embed_code = (
-                    f"\n\n![[assets/{slug}/{img_name}]]\n"
+                    f"\n\n![{img_name}](assets/{slug}/{img_name})\n"
                     f"> [!info] 📷 抽出図表アセット ({img_name})\n"
                 )
                 image_embed_blocks.append(embed_code)
