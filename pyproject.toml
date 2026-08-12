@@ -17,6 +17,8 @@ dependencies = [
     "click>=8.1.0",
     "openai>=3.0.0",
     "python-dotenv>=1.2.2",
+    "qdrant-client>=1.19.0",
+    "fastembed>=0.8.0",
 ]
 
 [project.scripts]
