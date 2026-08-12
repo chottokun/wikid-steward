@@ -2,17 +2,26 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 import yaml
+from enum import Enum
+
+
+class TableFormerMode(Enum):
+    ACCURATE = "accurate"
+    FAST = "fast"
 
 
 @dataclass
 class ParseProfile:
-    """パースプロファイル設定データクラス"""
+    """パース処理のポリシープロファイル"""
 
     name: str
     doc_type: str
     do_ocr: bool = False
     images_scale: float = 2.0
-    table_mode: str = "accurate"
+    table_mode: TableFormerMode = TableFormerMode.ACCURATE
+    vlm_enabled: bool = False
+    vlm_model: str = "qwen3.5:4b"
+    vlm_prompt: str = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
 
 
 # 標準定義プロファイル

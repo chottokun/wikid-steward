@@ -1,4 +1,6 @@
+import urllib.request
 from pathlib import Path
+
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import (
     AcceleratorDevice,
@@ -7,41 +9,43 @@ from docling.datamodel.pipeline_options import (
     TableStructureOptions,
 )
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling_lib import DocumentConversionOptions, EnhancedDoclingConverter, PDFConverter
+
+
+def check_ollama_available(endpoint: str = "http://localhost:11434") -> bool:
+    """ローカル Ollama サービスが稼働中か判定するヘルパー"""
+    try:
+        req = urllib.request.Request(f"{endpoint}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=1) as response:
+            return response.status == 200
+    except Exception:
+        return False
 
 
 class KnowledgeParser:
-    """docling-markdown-generator (Docling v2.x) を利用してドキュメントから高精度に
+    """docling-markdown-generator (Docling v2.x & EnhancedDoclingConverter) を利用して
 
-    構造化 Markdown および画像アセットを抽出するパーサー。
+    ドキュメントから高精度に構造化 Markdown および画像アセット、VLM 要約を抽出するパーサー。
     """
 
     def __init__(self, device: str = "cpu"):
         self.device = device
-        # PDF パイプライン設定
         pdf_options = PdfPipelineOptions()
 
-        # デバイス（CPU / CUDA）明示設定
         acc_device = (
             AcceleratorDevice.CUDA
             if device.lower() == "cuda"
             else AcceleratorDevice.CPU
         )
         pdf_options.accelerator_options = AcceleratorOptions(device=acc_device)
-
-        # デジタルPDFにおけるハルシネーション防止のため OCR はオフ
         pdf_options.do_ocr = False
-
-        # セル結合を維持した高精度テーブル構造解析 (HTML <table> 出力)
         pdf_options.do_table_structure = True
         pdf_options.table_structure_options = TableStructureOptions(
             mode="accurate"
         )
-
-        # 図表クロップの自動抽出設定
         pdf_options.images_scale = 2.0
         pdf_options.generate_picture_images = True
 
-        # コンバーターのシングルトン化・初期化
         self.converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)
@@ -49,15 +53,7 @@ class KnowledgeParser:
         )
 
     def parse(self, file_path: Path | str, profile=None):
-        """指定された原本ドキュメントをプロファイル設定に基づきパースし、DoclingConversionResult を返す。
-
-        Args:
-            file_path: 対象ファイルパス (PDF/DOCX/PPTX/XLSX)
-            profile: パースプロファイル (ParseProfile)。未指定の場合は標準設定。
-
-        Returns:
-            パース結果
-        """
+        """指定された原本ドキュメントをプロファイル設定に基づきパースし、DoclingConversionResult を返す。"""
         path = Path(file_path)
 
         if profile is not None:
@@ -87,5 +83,52 @@ class KnowledgeParser:
                 }
             )
             return converter.convert(path)
+
+        return self.converter.convert(path)
+
+    def parse_to_markdown_with_vlm(
+        self,
+        file_path: Path | str,
+        slug: str,
+        assets_dir: Path | None = None,
+        profile=None,
+    ) -> str:
+        """EnhancedDoclingConverter を呼び出し、VLM (Ollama) 自動解説付きの
+
+        整形 Markdown を生成・返却する。
+        """
+        path = Path(file_path)
+
+        vlm_enabled = False
+        vlm_model = "qwen3.5:4b"
+        vlm_prompt = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
+
+        if profile is not None:
+            vlm_enabled = profile.vlm_enabled
+            vlm_model = getattr(profile, "vlm_model", vlm_model)
+            vlm_prompt = getattr(profile, "vlm_prompt", vlm_prompt)
+
+        # Ollama の稼働自動チェック
+        if vlm_enabled and not check_ollama_available():
+            vlm_enabled = False
+
+        options = DocumentConversionOptions(
+            do_ocr=profile.do_ocr if profile else False,
+            image_scale=profile.images_scale if profile else 2.0,
+            vlm_enabled=vlm_enabled,
+            vlm_provider="ollama",
+            vlm_model=vlm_model,
+            vlm_endpoint="http://localhost:11434",
+            vlm_prompt=vlm_prompt,
+        )
+
+        pdf_converter = PDFConverter(options=options)
+        enhanced_converter = EnhancedDoclingConverter(
+            docling_converter=pdf_converter
+        )
+
+        return enhanced_converter.convert_to_markdown(
+            input_path=path, slug=slug, assets_dir=assets_dir
+        )
 
         return self.converter.convert(path)
