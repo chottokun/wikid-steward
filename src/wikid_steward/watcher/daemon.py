@@ -13,6 +13,7 @@ from wikid_steward.core.okf_converter import (
     replace_image_links,
 )
 from wikid_steward.core.parser import KnowledgeParser
+from wikid_steward.core.profiles import resolve_profile
 from wikid_steward.core.promoter import check_reviewed_status, promote_document
 from wikid_steward.core.slug import generate_slug
 
@@ -54,9 +55,12 @@ class RawFolderHandler(FileSystemEventHandler):
         ]:
             return
 
-        # スラッグ生成
+        # スラッグ生成 ＆ プロファイル解決
         rel_no_ext = str(rel_path.with_suffix(""))
         slug = generate_slug(rel_no_ext)
+        profile, prof_source, custom_meta = resolve_profile(
+            file_path, self.raw_dir
+        )
 
         # 冪等性チェック: wiki/ に既に reviewed ノートが存在する場合は上書き防止のため処理スキップ
         wiki_note = self.wiki_dir / rel_path.parent / f"{slug}.md"
@@ -66,11 +70,13 @@ class RawFolderHandler(FileSystemEventHandler):
             )
             return
 
-        logger.info(f"[INGEST] Processing raw file: {rel_path} -> slug: {slug}")
+        logger.info(
+            f"[INGEST] Processing raw file: {rel_path} -> slug: {slug} (profile: {profile.name}, source: {prof_source})"
+        )
 
         try:
-            # 1. Docling パースの実行
-            conv_result = self.parser.parse(file_path)
+            # 1. Docling パースの実行 (プロファイル設定を反映)
+            conv_result = self.parser.parse(file_path, profile=profile)
             doc_md = conv_result.document.export_to_markdown()
 
             # 2. アセットクリーンアップと画像埋め込み
@@ -96,12 +102,15 @@ class RawFolderHandler(FileSystemEventHandler):
                         }
                         embed_png_metadata(img_path, meta_payload)
 
-            # 3. OKF 【層A】 Frontmatter 付与 & Markdown 置換
+            # 3. OKF 【層A】 Frontmatter 付与 (トレーサビリティプロパティ追加) & Markdown 置換
             frontmatter = generate_okf_frontmatter(
                 doc_id=slug,
                 title=file_path.stem,
-                doc_type="Technical Note",
+                doc_type=profile.doc_type,
                 source_path=str(Path("raw_sources") / rel_path),
+                profile_used=profile.name,
+                profile_source=prof_source,
+                custom_metadata=custom_meta,
             )
             body = replace_image_links(doc_md, slug)
             final_content = f"{frontmatter}\n{body}"

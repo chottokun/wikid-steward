@@ -47,14 +47,35 @@ class KnowledgeParser:
             }
         )
 
-    def parse(self, file_path: Path | str):
-        """指定された原本ドキュメントをパースし、DoclingConversionResult オブジェクトを返す。
+    def parse(self, file_path: Path | str, profile=None):
+        """指定された原本ドキュメントをプロファイル設定に基づきパースし、DoclingConversionResult を返す。
 
         Args:
             file_path: 対象ファイルパス (PDF/DOCX/PPTX/XLSX)
+            profile: パースプロファイル (ParseProfile)。未指定の場合は標準設定。
 
         Returns:
             パース結果
         """
         path = Path(file_path)
+
+        if profile is not None:
+            pdf_options = PdfPipelineOptions()
+            pdf_options.do_ocr = profile.do_ocr
+            pdf_options.images_scale = profile.images_scale
+            pdf_options.do_table_structure = True
+            pdf_options.table_structure_options = TableStructureOptions(
+                mode=profile.table_mode
+            )
+            pdf_options.generate_picture_images = True
+
+            converter = DocumentConverter(
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(
+                        pipeline_options=pdf_options
+                    )
+                }
+            )
+            return converter.convert(path)
+
         return self.converter.convert(path)

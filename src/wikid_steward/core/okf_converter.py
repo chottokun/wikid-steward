@@ -9,6 +9,9 @@ def generate_okf_frontmatter(
     doc_type: str,
     source_path: str,
     tags: list[str] | None = None,
+    profile_used: str = "paper",
+    profile_source: str = "default",
+    custom_metadata: dict | None = None,
 ) -> str:
     """Google OKF v0.2 に適合する【層A】YAML Frontmatter を生成する。
 
@@ -18,26 +21,36 @@ def generate_okf_frontmatter(
         doc_type: OKFドキュメント種別 (例: "Technical Specification")
         source_path: 一次ソース原本への相対パス
         tags: タグのリスト
+        profile_used: 適用されたパースプロファイル名 ("paper", "drawing" 等)
+        profile_source: 判定理由 ("sidecar_yaml", "directory_policy", "default")
+        custom_metadata: ユーザー定義追加メタデータ
 
     Returns:
         YAML Frontmatter 文字列 ("---\n...---\n")
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
+    provenance_data = {
+        "extracted": 0.90,
+        "inferred": 0.10,
+        "inferred_by": "wikid-steward v0.1",
+        "profile_used": profile_used,
+        "profile_source": profile_source,
+    }
+
     data = {
         "id": doc_id,
         "title": title,
         "type": doc_type,
         "source": source_path,
-        "provenance": {
-            "extracted": 0.90,
-            "inferred": 0.10,
-            "inferred_by": "wikid-steward v0.1",
-        },
+        "provenance": provenance_data,
         "status": "unreviewed",
         "created": now_iso,
         "tags": tags or ["raw_ingest"],
     }
+
+    if custom_metadata:
+        data["custom_metadata"] = custom_metadata
 
     yaml_str = yaml.dump(data, allow_unicode=True, sort_keys=False)
     return f"---\n{yaml_str}---\n"
