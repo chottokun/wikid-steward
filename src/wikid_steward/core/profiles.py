@@ -20,7 +20,10 @@ class ParseProfile:
     images_scale: float = 2.0
     table_mode: TableFormerMode = TableFormerMode.ACCURATE
     vlm_enabled: bool = False
+    vlm_provider: str = "ollama"  # "ollama", "openai", "custom", "anthropic", "vllm" 等
     vlm_model: str = "qwen3.5:4b"
+    vlm_endpoint: str = "http://localhost:11434"
+    vlm_api_key: str = ""
     vlm_prompt: str = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
 
 

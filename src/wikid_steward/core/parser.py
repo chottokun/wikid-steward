@@ -93,32 +93,35 @@ class KnowledgeParser:
         assets_dir: Path | None = None,
         profile=None,
     ) -> str:
-        """EnhancedDoclingConverter を呼び出し、VLM (Ollama) 自動解説付きの
+        """EnhancedDoclingConverter を呼び出し、各種 VLM (Ollama, OpenAI, Custom 等) 自動解説付きの
 
         整形 Markdown を生成・返却する。
         """
         path = Path(file_path)
 
         vlm_enabled = False
+        vlm_provider = "ollama"
         vlm_model = "qwen3.5:4b"
+        vlm_endpoint = "http://localhost:11434"
+        vlm_api_key = ""
         vlm_prompt = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
 
         if profile is not None:
-            vlm_enabled = profile.vlm_enabled
+            vlm_enabled = getattr(profile, "vlm_enabled", vlm_enabled)
+            vlm_provider = getattr(profile, "vlm_provider", vlm_provider)
             vlm_model = getattr(profile, "vlm_model", vlm_model)
+            vlm_endpoint = getattr(profile, "vlm_endpoint", vlm_endpoint)
+            vlm_api_key = getattr(profile, "vlm_api_key", vlm_api_key)
             vlm_prompt = getattr(profile, "vlm_prompt", vlm_prompt)
-
-        # Ollama の稼働自動チェック
-        if vlm_enabled and not check_ollama_available():
-            vlm_enabled = False
 
         options = DocumentConversionOptions(
             do_ocr=profile.do_ocr if profile else False,
             image_scale=profile.images_scale if profile else 2.0,
             vlm_enabled=vlm_enabled,
-            vlm_provider="ollama",
+            vlm_provider=vlm_provider,
             vlm_model=vlm_model,
-            vlm_endpoint="http://localhost:11434",
+            vlm_endpoint=vlm_endpoint,
+            vlm_api_key=vlm_api_key,
             vlm_prompt=vlm_prompt,
         )
 
