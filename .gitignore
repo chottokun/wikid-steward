@@ -219,8 +219,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# local
-plan/
+# local plan documents
+!plan/*.md
 
 # LLM Wiki Lifecycles & Temporary Isolation Directories
 _raw/
