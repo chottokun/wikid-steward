@@ -227,3 +227,9 @@ _raw/
 raw_sources/
 staging/
 scratch/
+
+# Binary documents & raw media files (Strictly excluded from Git)
+*.pdf
+*.docx
+*.pptx
+*.xlsx
