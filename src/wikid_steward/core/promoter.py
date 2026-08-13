@@ -50,15 +50,18 @@ def promote_document(
         raw_relative_path: _raw ディレクトリ内の原本の相対パス (例: "projA/doc1.pdf")
         commit_git: GitPython でセマンティックコミットを実行するかどうか
     """
+    from wikid_steward.core.config import get_config
+    cfg = get_config()
+
     note_path = Path(staging_note)
     base = Path(base_dir)
 
     # staging/ からの相対パス階層を取得
-    staging_base = base / "staging"
+    staging_base = base / cfg.paths.staging_dir
     rel_path = note_path.relative_to(staging_base)
 
     # ターゲットパス (wiki/ 内)
-    wiki_base = base / "wiki"
+    wiki_base = base / cfg.paths.wiki_dir
     target_note = wiki_base / rel_path
 
     # アセットフォルダパスの特定 (Frontmatter の id または stem から取得)
@@ -131,8 +134,8 @@ def promote_document(
 
     # 5. 原本バイナリの退避: _raw/ -> raw_sources/
     if raw_relative_path:
-        raw_source = base / "_raw" / raw_relative_path
-        target_raw_source = base / "raw_sources" / raw_relative_path
+        raw_source = base / cfg.paths.raw_dir / raw_relative_path
+        target_raw_source = base / cfg.paths.raw_sources_dir / raw_relative_path
         if raw_source.exists():
             target_raw_source.parent.mkdir(parents=True, exist_ok=True)
             if target_raw_source.exists():

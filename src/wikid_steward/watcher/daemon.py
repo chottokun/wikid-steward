@@ -26,10 +26,12 @@ class RawFolderHandler(FileSystemEventHandler):
 
     def __init__(self, base_dir: Path):
         super().__init__()
+        from wikid_steward.core.config import get_config
+        cfg = get_config()
         self.base_dir = base_dir
-        self.raw_dir = base_dir / "_raw"
-        self.staging_dir = base_dir / "staging"
-        self.wiki_dir = base_dir / "wiki"
+        self.raw_dir = base_dir / cfg.paths.raw_dir
+        self.staging_dir = base_dir / cfg.paths.staging_dir
+        self.wiki_dir = base_dir / cfg.paths.wiki_dir
         self.parser = KnowledgeParser()
 
     def on_created(self, event: FileSystemEvent) -> None:
@@ -98,11 +100,13 @@ class RawFolderHandler(FileSystemEventHandler):
                     img_path = staging_assets_dir / img_name
                     if hasattr(pic, "image") and pic.image:
                         pic.image.pil_image.save(img_path)
+                        from wikid_steward.core.config import get_config
+                        cfg = get_config()
                         meta_payload = {
                             "uuid": f"img_{slug}_crop{i + 1:02d}",
                             "parent_doc_id": slug,
                             "original_source": str(
-                                Path("raw_sources") / rel_path
+                                Path(cfg.paths.raw_sources_dir) / rel_path
                             ),
                             "page_number": getattr(pic, "page_no", 1),
                         }
@@ -110,11 +114,13 @@ class RawFolderHandler(FileSystemEventHandler):
                         extracted_image_names.append(img_name)
 
             # 3. OKF 【層A】 Frontmatter 付与 (トレーサビリティプロパティ追加) & Markdown 置換
+            from wikid_steward.core.config import get_config
+            cfg = get_config()
             frontmatter = generate_okf_frontmatter(
                 doc_id=slug,
                 title=file_path.stem,
                 doc_type=profile.doc_type,
-                source_path=str(Path("raw_sources") / rel_path),
+                source_path=str(Path(cfg.paths.raw_sources_dir) / rel_path),
                 profile_used=profile.name,
                 profile_source=prof_source,
                 custom_metadata=custom_meta,
@@ -181,16 +187,18 @@ class StagingFolderHandler(FileSystemEventHandler):
 def start_daemon(base_dir: Path | str) -> None:
     """_raw ディレクトリおよび staging ディレクトリのリアルタイム監視デーモンを開始する"""
     base = Path(base_dir)
+    from wikid_steward.core.config import get_config
+    cfg = get_config()
     observer = Observer()
 
     raw_handler = RawFolderHandler(base)
     staging_handler = StagingFolderHandler(base)
 
-    (base / "_raw").mkdir(parents=True, exist_ok=True)
-    (base / "staging").mkdir(parents=True, exist_ok=True)
+    (base / cfg.paths.raw_dir).mkdir(parents=True, exist_ok=True)
+    (base / cfg.paths.staging_dir).mkdir(parents=True, exist_ok=True)
 
-    observer.schedule(raw_handler, str(base / "_raw"), recursive=True)
-    observer.schedule(staging_handler, str(base / "staging"), recursive=True)
+    observer.schedule(raw_handler, str(base / cfg.paths.raw_dir), recursive=True)
+    observer.schedule(staging_handler, str(base / cfg.paths.staging_dir), recursive=True)
 
     observer.start()
     logger.info(f"[DAEMON] Started wikid-steward daemon watching {base}")

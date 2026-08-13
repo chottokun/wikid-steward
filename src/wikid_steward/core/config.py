@@ -24,6 +24,7 @@ class VLMSettings:
     provider: str = "ollama"
     model: str = "qwen3.5:4b"
     endpoint: str = "http://localhost:11434"
+    api_key: str = ""
     prompt: str = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
 
 
@@ -69,11 +70,13 @@ class RelinkerSettings:
 class VectorDBSettings:
     provider: str = "qdrant"
     url: str = "http://localhost:6333"
+    api_key: str = ""
     collection_name: str = "wikid_steward_knowledge"
     max_context_tokens: int = 4000
     embedding_provider: str = "ollama"  # "ollama", "openai", "fastembed"
     embedding_base_url: str = "http://localhost:11434/v1"
     embedding_model: str = "qwen3-embedding:0.6b"
+    embedding_api_key: str = ""
     max_hub_degree: int = 25  # 巨大ハブノード度数閾値
     max_traversal_tokens: int = 1200  # 1-Hop 巡回読み込みトークン上限
 
@@ -149,6 +152,7 @@ def load_app_config(
                 cfg.vlm.provider = d.get("provider", cfg.vlm.provider)
                 cfg.vlm.model = d.get("model", cfg.vlm.model)
                 cfg.vlm.endpoint = d.get("endpoint", cfg.vlm.endpoint)
+                cfg.vlm.api_key = d.get("api_key", cfg.vlm.api_key)
                 cfg.vlm.prompt = d.get("prompt", cfg.vlm.prompt)
 
             # 3. Paths 設定
@@ -205,11 +209,13 @@ def load_app_config(
                 d = data["vector_db"]
                 cfg.vector_db.provider = d.get("provider", cfg.vector_db.provider)
                 cfg.vector_db.url = d.get("url", cfg.vector_db.url)
+                cfg.vector_db.api_key = d.get("api_key", cfg.vector_db.api_key)
                 cfg.vector_db.collection_name = d.get("collection_name", cfg.vector_db.collection_name)
                 cfg.vector_db.max_context_tokens = int(d.get("max_context_tokens", cfg.vector_db.max_context_tokens))
                 cfg.vector_db.embedding_provider = d.get("embedding_provider", cfg.vector_db.embedding_provider)
                 cfg.vector_db.embedding_base_url = d.get("embedding_base_url", cfg.vector_db.embedding_base_url)
                 cfg.vector_db.embedding_model = d.get("embedding_model", cfg.vector_db.embedding_model)
+                cfg.vector_db.embedding_api_key = d.get("embedding_api_key", cfg.vector_db.embedding_api_key)
                 cfg.vector_db.max_hub_degree = int(d.get("max_hub_degree", cfg.vector_db.max_hub_degree))
                 cfg.vector_db.max_traversal_tokens = int(d.get("max_traversal_tokens", cfg.vector_db.max_traversal_tokens))
 
@@ -217,12 +223,97 @@ def load_app_config(
             print(f"Warning: Failed to load config file {target_config}: {e}")
 
     # 環境変数による最高優先度上書き
-    if os.getenv("OPENAI_BASE_URL"):
+
+    def parse_bool(val: str | None) -> bool:
+        if not val:
+            return False
+        return val.strip().lower() in ("true", "1", "yes", "on")
+
+    # 1. LLM
+    if os.getenv("LLM_PROVIDER"):
+        cfg.llm.provider = os.environ["LLM_PROVIDER"]
+    if os.getenv("LLM_BASE_URL"):
+        cfg.llm.base_url = os.environ["LLM_BASE_URL"]
+    elif os.getenv("OPENAI_BASE_URL"):
         cfg.llm.base_url = os.environ["OPENAI_BASE_URL"]
-    if os.getenv("OPENAI_API_KEY"):
+    if os.getenv("LLM_API_KEY"):
+        cfg.llm.api_key = os.environ["LLM_API_KEY"]
+    elif os.getenv("OPENAI_API_KEY"):
         cfg.llm.api_key = os.environ["OPENAI_API_KEY"]
-    if os.getenv("OPENAI_MODEL"):
+    if os.getenv("LLM_MODEL"):
+        cfg.llm.model = os.environ["LLM_MODEL"]
+    elif os.getenv("OPENAI_MODEL"):
         cfg.llm.model = os.environ["OPENAI_MODEL"]
+    if os.getenv("LLM_TEMPERATURE"):
+        cfg.llm.temperature = float(os.environ["LLM_TEMPERATURE"])
+    if os.getenv("LLM_MAX_TOKENS"):
+        cfg.llm.max_tokens = int(os.environ["LLM_MAX_TOKENS"])
+
+    # 2. VLM
+    if os.getenv("VLM_ENABLED"):
+        cfg.vlm.enabled = parse_bool(os.environ["VLM_ENABLED"])
+    if os.getenv("VLM_PROVIDER"):
+        cfg.vlm.provider = os.environ["VLM_PROVIDER"]
+    if os.getenv("VLM_MODEL"):
+        cfg.vlm.model = os.environ["VLM_MODEL"]
+    if os.getenv("VLM_ENDPOINT"):
+        cfg.vlm.endpoint = os.environ["VLM_ENDPOINT"]
+    if os.getenv("VLM_API_KEY"):
+        cfg.vlm.api_key = os.environ["VLM_API_KEY"]
+    if os.getenv("VLM_PROMPT"):
+        cfg.vlm.prompt = os.environ["VLM_PROMPT"]
+
+    # 3. Paths
+    if os.getenv("PATHS_RAW_DIR"):
+        cfg.paths.raw_dir = os.environ["PATHS_RAW_DIR"]
+    elif os.getenv("RAW_DIR"):
+        cfg.paths.raw_dir = os.environ["RAW_DIR"]
+    if os.getenv("PATHS_RAW_SOURCES_DIR"):
+        cfg.paths.raw_sources_dir = os.environ["PATHS_RAW_SOURCES_DIR"]
+    elif os.getenv("RAW_SOURCES_DIR"):
+        cfg.paths.raw_sources_dir = os.environ["RAW_SOURCES_DIR"]
+    if os.getenv("PATHS_STAGING_DIR"):
+        cfg.paths.staging_dir = os.environ["PATHS_STAGING_DIR"]
+    elif os.getenv("STAGING_DIR"):
+        cfg.paths.staging_dir = os.environ["STAGING_DIR"]
+    if os.getenv("PATHS_WIKI_DIR"):
+        cfg.paths.wiki_dir = os.environ["PATHS_WIKI_DIR"]
+    elif os.getenv("WIKI_DIR"):
+        cfg.paths.wiki_dir = os.environ["WIKI_DIR"]
+
+    # 4. Relinker
+    if os.getenv("RELINKER_STOP_WORDS"):
+        cfg.relinker.stop_words = [w.strip() for w in os.environ["RELINKER_STOP_WORDS"].split(",")]
+    if os.getenv("RELINKER_MIN_TERM_LENGTH"):
+        cfg.relinker.min_term_length = int(os.environ["RELINKER_MIN_TERM_LENGTH"])
+
+    # 5. Vector DB
+    if os.getenv("VECTOR_DB_PROVIDER"):
+        cfg.vector_db.provider = os.environ["VECTOR_DB_PROVIDER"]
+    if os.getenv("VECTOR_DB_URL"):
+        cfg.vector_db.url = os.environ["VECTOR_DB_URL"]
+    elif os.getenv("QDRANT_URL"):
+        cfg.vector_db.url = os.environ["QDRANT_URL"]
+    if os.getenv("VECTOR_DB_API_KEY"):
+        cfg.vector_db.api_key = os.environ["VECTOR_DB_API_KEY"]
+    elif os.getenv("QDRANT_API_KEY"):
+        cfg.vector_db.api_key = os.environ["QDRANT_API_KEY"]
+    if os.getenv("VECTOR_DB_COLLECTION_NAME"):
+        cfg.vector_db.collection_name = os.environ["VECTOR_DB_COLLECTION_NAME"]
+    if os.getenv("VECTOR_DB_MAX_CONTEXT_TOKENS"):
+        cfg.vector_db.max_context_tokens = int(os.environ["VECTOR_DB_MAX_CONTEXT_TOKENS"])
+    if os.getenv("VECTOR_DB_EMBEDDING_PROVIDER"):
+        cfg.vector_db.embedding_provider = os.environ["VECTOR_DB_EMBEDDING_PROVIDER"]
+    if os.getenv("VECTOR_DB_EMBEDDING_BASE_URL"):
+        cfg.vector_db.embedding_base_url = os.environ["VECTOR_DB_EMBEDDING_BASE_URL"]
+    if os.getenv("VECTOR_DB_EMBEDDING_MODEL"):
+        cfg.vector_db.embedding_model = os.environ["VECTOR_DB_EMBEDDING_MODEL"]
+    if os.getenv("VECTOR_DB_EMBEDDING_API_KEY"):
+        cfg.vector_db.embedding_api_key = os.environ["VECTOR_DB_EMBEDDING_API_KEY"]
+    if os.getenv("VECTOR_DB_MAX_HUB_DEGREE"):
+        cfg.vector_db.max_hub_degree = int(os.environ["VECTOR_DB_MAX_HUB_DEGREE"])
+    if os.getenv("VECTOR_DB_MAX_TRAVERSAL_TOKENS"):
+        cfg.vector_db.max_traversal_tokens = int(os.environ["VECTOR_DB_MAX_TRAVERSAL_TOKENS"])
 
     return cfg
 

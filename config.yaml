@@ -1,10 +1,12 @@
 # wikid-steward Comprehensive Configuration
+# Note: Sensitive variables (like credentials, API keys) should be placed in your `.env` file instead.
+# Environment variables will override any values configured here.
 
 # 1. LLM 接続設定 (OpenAI 互換 API)
 llm:
   provider: "ollama"
   base_url: "http://localhost:11434/v1"
-  api_key: "ollama"
+  api_key: "ollama"               # 機微なAPIキーは .env (LLM_API_KEY または OPENAI_API_KEY) に書くことを推奨します
   model: "gemma4:latest"
   temperature: 0.2
   max_tokens: 2048
@@ -15,6 +17,8 @@ vlm:
   provider: "ollama"
   model: "qwen3.5:4b"
   endpoint: "http://localhost:11434"
+  api_key: ""                     # 機微なAPIキーは .env (VLM_API_KEY) に書くことを推奨します
+  prompt: "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
 
 # 3. 4層ライフサイクル・ディレクトリ構成設定
 paths:
@@ -43,10 +47,12 @@ relinker:
 vector_db:
   provider: "qdrant"
   url: "http://localhost:6333"
+  api_key: ""                     # Qdrant Cloud等のAPIキー。機微情報のため .env (VECTOR_DB_API_KEY) への記載を推奨します
   collection_name: "wikid_steward_knowledge"
   max_context_tokens: 4000
   embedding_provider: "ollama"
   embedding_base_url: "http://localhost:11434/v1"
   embedding_model: "qwen3-embedding:0.6b"
+  embedding_api_key: ""           # 埋め込みAPIキー。機微情報のため .env (VECTOR_DB_EMBEDDING_API_KEY) への記載を推奨します
   max_hub_degree: 25            # 巨大ハブノード度数閾値 (これを超えたら簡易参照化)
   max_traversal_tokens: 1200    # 1-Hop 巡回読み込みトークン上限
