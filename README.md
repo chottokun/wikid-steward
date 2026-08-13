@@ -69,10 +69,25 @@ uv run wikid-steward lint
 
 ---
 
-## ⚙️ 外部設定 (`config.yaml` ＆ `.env`)
+## ⚙️ 外部設定 (`config.yaml`, `profiles/*.yaml` ＆ `.env`)
 
-環境変数 (`.env`) > `config.yaml` > デフォルト値 の優先順位で読み込まれます。
+設定は **環境変数 (`.env`) ＞ `profiles/*.yaml` / `config.yaml` ＞ デフォルト値** のカスケード優先順位で安全かつ柔軟にコントロールされます。
 
+### 1. `.env.example` からの環境変数セットアップ
+```bash
+# 環境変数テンプレートをコピーして API Key やパスを自由設定
+cp .env.example .env
+```
+
+### 2. `profiles/` ディレクトリによる `doc_type` 別独立カスタマイズ
+`profiles/` ディレクトリ配下に `doc_type` 別の独立した設定ファイル（`drawing.yaml`, `drawing_sbom.yaml`, `paper.yaml`, `default.yaml` 等）を配置することで、VLM 解釈プロンプトや画像解像度を個別に自由制御できます。
+
+* **`profiles/drawing.yaml`**: 技術図面（拡大解像度 3.0x, 寸法・公差表記 `15.0±0.05mm`, `Φ12` 特化要約プロンプト）
+* **`profiles/drawing_sbom.yaml`**: 部品構成表（解像度 2.5x, 構造化 HTML/Markdown 表形式特化プロンプト）
+* **`profiles/paper.yaml`**: 論文・文献（解像度 2.0x, グラフ傾向要約プロンプト）
+* **`profiles/default.yaml`**: 一般ドキュメントデフォルト要約設定
+
+### 3. 設定ファイルサンプル (`config.yaml`)
 ```yaml
 # config.yaml
 llm:
@@ -89,6 +104,14 @@ paths:
   raw_dir: "_raw"
   staging_dir: "staging"
   wiki_dir: "wiki"
+
+vector_db:
+  provider: "qdrant"
+  url: "http://localhost:6333"
+  max_context_tokens: 4000
+  embedding_model: "qwen3-embedding:0.6b"
+  max_hub_degree: 25            # 巨大ハブノード度数閾値
+  max_traversal_tokens: 1200    # 1-Hop 巡回読み込みトークン上限
 ```
 
 ---
@@ -96,6 +119,6 @@ paths:
 ## 🧪 テスト実行
 
 ```bash
-# 全 38 件の単体・結合テストの実行
+# 全 42 件の単体・結合テストの実行 (100% PASS)
 uv run pytest
 ```
