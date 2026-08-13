@@ -37,10 +37,12 @@ class PathSettings:
 
 @dataclass
 class ProfileSetting:
-    doc_type: str
+    doc_type: str = "General Document"
     do_ocr: bool = False
     images_scale: float = 2.0
     table_mode: str = "accurate"
+    vlm_prompt: str | None = None
+    extraction_format: str = "markdown"
 
 
 @dataclass
@@ -83,10 +85,24 @@ class AppConfig:
     paths: PathSettings = field(default_factory=PathSettings)
     profiles: dict[str, ProfileSetting] = field(
         default_factory=lambda: {
-            "paper": ProfileSetting(doc_type="Academic Paper", do_ocr=False, images_scale=2.0),
-            "drawing": ProfileSetting(doc_type="Technical Drawing", do_ocr=True, images_scale=3.0),
-            "spreadsheet": ProfileSetting(doc_type="Data Sheet", do_ocr=False, images_scale=2.0),
-            "presentation": ProfileSetting(doc_type="Presentation", do_ocr=False, images_scale=2.0),
+            "paper": ProfileSetting(
+                doc_type="Academic Paper",
+                do_ocr=False,
+                images_scale=2.0,
+                extraction_format="markdown",
+            ),
+            "drawing": ProfileSetting(
+                doc_type="Technical Drawing",
+                do_ocr=True,
+                images_scale=3.0,
+                extraction_format="markdown",
+            ),
+            "drawing_sbom": ProfileSetting(
+                doc_type="Drawing SBOM",
+                do_ocr=True,
+                images_scale=2.5,
+                extraction_format="html_table",
+            ),
         }
     )
     relinker: RelinkerSettings = field(default_factory=RelinkerSettings)
@@ -105,7 +121,7 @@ def load_app_config(
     if config_path:
         target_config = Path(config_path)
     else:
-        for possible in [base / "config.yaml", base / "config.yml", base / "config.json"]:
+        for possible in [base / "config.yaml", base / "config.yml"]:
             if possible.exists():
                 target_config = possible
                 break
@@ -143,7 +159,7 @@ def load_app_config(
                 cfg.paths.staging_dir = d.get("staging_dir", cfg.paths.staging_dir)
                 cfg.paths.wiki_dir = d.get("wiki_dir", cfg.paths.wiki_dir)
 
-            # 4. Profiles 設定
+            # 4. Profiles 設定 (config.yaml 内 + profiles/ ディレクトリからのサブコンフィグ)
             if "profiles" in data and isinstance(data["profiles"], dict):
                 prof_dict = {}
                 for name, pdata in data["profiles"].items():
@@ -153,9 +169,29 @@ def load_app_config(
                             do_ocr=bool(pdata.get("do_ocr", False)),
                             images_scale=float(pdata.get("images_scale", 2.0)),
                             table_mode=pdata.get("table_mode", "accurate"),
+                            vlm_prompt=pdata.get("vlm_prompt", None),
+                            extraction_format=pdata.get("extraction_format", "markdown"),
                         )
                 if prof_dict:
                     cfg.profiles = prof_dict
+
+            # profiles/ サブディレクトリが存在する場合の個別の doc_type config ロード
+            profiles_dir = base / "profiles"
+            if profiles_dir.exists() and profiles_dir.is_dir():
+                for p_file in profiles_dir.glob("*.yaml"):
+                    p_name = p_file.stem
+                    try:
+                        p_data = yaml.safe_load(p_file.read_text(encoding="utf-8")) or {}
+                        cfg.profiles[p_name] = ProfileSetting(
+                            doc_type=p_data.get("doc_type", "General Document"),
+                            do_ocr=bool(p_data.get("do_ocr", False)),
+                            images_scale=float(p_data.get("images_scale", 2.0)),
+                            table_mode=p_data.get("table_mode", "accurate"),
+                            vlm_prompt=p_data.get("vlm_prompt", None),
+                            extraction_format=p_data.get("extraction_format", "markdown"),
+                        )
+                    except Exception as pe:
+                        print(f"Warning: Failed to load profile sub-config {p_file}: {pe}")
 
             # 5. Relinker 設定
             if "relinker" in data and isinstance(data["relinker"], dict):

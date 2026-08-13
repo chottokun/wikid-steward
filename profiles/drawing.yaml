@@ -1,0 +1,10 @@
+# Technical Drawing Profile Sub-Config
+doc_type: "Technical Drawing"
+do_ocr: true
+images_scale: 3.0  # 超高解像度 3.0x (寸法値・公差記号・文字潰れ防止)
+extraction_format: "markdown"
+vlm_prompt: |
+  この技術図面・機構図から以下の重要情報を精度高く抽出・解釈してください：
+  1. 図面内の主要寸法値および公差表記（例: 15.0±0.05mm, Φ12, Ra0.8等）
+  2. 照合番号（バルーン番号・部品No）と幾何公差記号
+  3. 注記（Material, Surface Finish, General Tolerances）

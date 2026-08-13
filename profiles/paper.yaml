@@ -1,0 +1,10 @@
+# Academic Paper Profile Sub-Config
+doc_type: "Academic Paper"
+do_ocr: false
+images_scale: 2.0
+extraction_format: "markdown"
+vlm_prompt: |
+  この論文中の図表（グラフ、構成図、概念図）の内容を日本語で解説してください：
+  1. X軸・Y軸のラベル、単位、および比較条件
+  2. 手法やモデル間の性能差、数値の増減傾向
+  3. 図が示している核心的な結論やメッセージ

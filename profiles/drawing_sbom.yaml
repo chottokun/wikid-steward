@@ -1,0 +1,8 @@
+# Drawing SBOM / Parts List Profile Sub-Config
+doc_type: "Drawing SBOM"
+do_ocr: true
+images_scale: 2.5
+extraction_format: "html_table"  # 構造化 HTML/Markdown 表を強制
+vlm_prompt: |
+  この部品構成表 (BOM / Parts List) を以下の標準表形式で正確に抽出してください：
+  | Item (品番) | Part Number (図番) | Description (品名) | Qty (数量) | Material (材質) |

@@ -25,21 +25,50 @@ class ParseProfile:
     vlm_endpoint: str = "http://localhost:11434"
     vlm_api_key: str = ""
     vlm_prompt: str = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
+    extraction_format: str = "markdown"  # "markdown", "html_table", "structured_json"
 
 
-# 標準定義プロファイル
+# 1. 学術論文プロファイル (Academic Paper)
 PAPER_PROFILE = ParseProfile(
     name="paper",
     doc_type="Academic Paper",
     do_ocr=False,
     images_scale=2.0,
+    extraction_format="markdown",
+    vlm_prompt=(
+        "この論文中の図表（グラフ、構成図、概念図）の内容を日本語で解説してください：\n"
+        "1. X軸・Y軸のラベル、単位、および比較条件\n"
+        "2. 手法やモデル間の性能差、数値の増減傾向\n"
+        "3. 図が示している核心的な結論やメッセージ"
+    ),
 )
 
+# 2. 技術図面プロファイル (Technical Drawing) - 寸法・公差・照合番号特化
 DRAWING_PROFILE = ParseProfile(
     name="drawing",
     doc_type="Technical Drawing",
     do_ocr=True,
-    images_scale=3.0,
+    images_scale=3.0,  # 超高解像度 3.0x (文字潰れ防止)
+    extraction_format="markdown",
+    vlm_prompt=(
+        "この技術図面・機構図から以下の重要情報を精度高く抽出・解釈してください：\n"
+        "1. 図面内の主要寸法値および公差表記（例: 15.0±0.05mm, Φ12, Ra0.8等）\n"
+        "2. 照合番号（バルーン番号・部品No）と幾何公差記号\n"
+        "3. 注記（Material, Surface Finish, General Tolerances）"
+    ),
+)
+
+# 3. 図面 SBOM / 部品構成表プロファイル (Drawing SBOM) - 表構造特化
+DRAWING_SBOM_PROFILE = ParseProfile(
+    name="drawing_sbom",
+    doc_type="Drawing SBOM",
+    do_ocr=True,
+    images_scale=2.5,
+    extraction_format="html_table",  # 構造化 HTML/Markdown 表を強制
+    vlm_prompt=(
+        "この部品構成表 (BOM / Parts List) を以下の標準表形式で正確に抽出してください：\n"
+        "| Item (品番) | Part Number (図番) | Description (品名) | Qty (数量) | Material (材質) |"
+    ),
 )
 
 SPREADSHEET_PROFILE = ParseProfile(
@@ -59,6 +88,7 @@ PRESENTATION_PROFILE = ParseProfile(
 PROFILES_MAP = {
     "paper": PAPER_PROFILE,
     "drawing": DRAWING_PROFILE,
+    "drawing_sbom": DRAWING_SBOM_PROFILE,
     "spreadsheet": SPREADSHEET_PROFILE,
     "presentation": PRESENTATION_PROFILE,
 }
@@ -119,39 +149,75 @@ def resolve_profile(
                 pass
 
     # 2. 優先度 2: ディレクトリポリシーの判定 (フォルダ名キーワード)
+    from wikid_steward.core.config import get_config
+    app_cfg = get_config()
+
     try:
         rel_path = file_path.relative_to(base_dir)
         folder_parts = [p.lower() for p in rel_path.parts[:-1]]
         folder_str = "/".join(folder_parts)
 
-        # 図面フォルダキーワード
-        if any(
-            kw in folder_str
-            for kw in ["drawing", "cad", "図面", "dwg", "schematic"]
-        ):
-            return DRAWING_PROFILE, "directory_policy", {}
+        # 図面/SBOM フォルダキーワード
+        if any(kw in folder_str for kw in ["sbom", "bom", "部品表"]):
+            cfg_p = app_cfg.profiles.get("drawing_sbom")
+            prof = DRAWING_SBOM_PROFILE
+            if cfg_p:
+                prof = ParseProfile(
+                    name="drawing_sbom",
+                    doc_type=cfg_p.doc_type,
+                    do_ocr=cfg_p.do_ocr,
+                    images_scale=cfg_p.images_scale,
+                    vlm_prompt=cfg_p.vlm_prompt or DRAWING_SBOM_PROFILE.vlm_prompt,
+                    extraction_format=cfg_p.extraction_format,
+                )
+            return prof, "directory_policy", {}
 
-        # 論文・文献フォルダキーワード
-        if any(
-            kw in folder_str for kw in ["paper", "arxiv", "論文", "journal"]
-        ):
-            return PAPER_PROFILE, "directory_policy", {}
+        if any(kw in folder_str for kw in ["drawing", "cad", "図面", "dwg", "schematic"]):
+            cfg_p = app_cfg.profiles.get("drawing")
+            prof = DRAWING_PROFILE
+            if cfg_p:
+                prof = ParseProfile(
+                    name="drawing",
+                    doc_type=cfg_p.doc_type,
+                    do_ocr=cfg_p.do_ocr,
+                    images_scale=cfg_p.images_scale,
+                    vlm_prompt=cfg_p.vlm_prompt or DRAWING_PROFILE.vlm_prompt,
+                    extraction_format=cfg_p.extraction_format,
+                )
+            return prof, "directory_policy", {}
 
-        # 表計算フォルダキーワード
-        if any(
-            kw in folder_str for kw in ["sheet", "excel", "csv", "表データ"]
-        ):
+        if any(kw in folder_str for kw in ["paper", "article", "論文", "arxiv", "papers"]):
+            cfg_p = app_cfg.profiles.get("paper")
+            prof = PAPER_PROFILE
+            if cfg_p:
+                prof = ParseProfile(
+                    name="paper",
+                    doc_type=cfg_p.doc_type,
+                    do_ocr=cfg_p.do_ocr,
+                    images_scale=cfg_p.images_scale,
+                    vlm_prompt=cfg_p.vlm_prompt or PAPER_PROFILE.vlm_prompt,
+                    extraction_format=cfg_p.extraction_format,
+                )
+            return prof, "directory_policy", {}
+
+        if any(kw in folder_str for kw in ["sheet", "excel", "csv", "表データ", "sheets"]):
             return SPREADSHEET_PROFILE, "directory_policy", {}
 
-        # スライドフォルダキーワード
-        if any(
-            kw in folder_str
-            for kw in ["slide", "presentation", "pptx", "発表資料"]
-        ):
+        if any(kw in folder_str for kw in ["slide", "presentation", "pptx", "発表資料", "slides"]):
             return PRESENTATION_PROFILE, "directory_policy", {}
-
-    except ValueError:
+    except Exception:
         pass
 
-    # 3. 優先度 3: 当てはまらないパターンは完全デフォルト (PAPER_PROFILE)
-    return PAPER_PROFILE, "default", {}
+    # 3. 優先度 3: デフォルトプロファイル (PAPER_PROFILE)
+    cfg_p = app_cfg.profiles.get("paper")
+    prof = PAPER_PROFILE
+    if cfg_p:
+        prof = ParseProfile(
+            name="paper",
+            doc_type=cfg_p.doc_type,
+            do_ocr=cfg_p.do_ocr,
+            images_scale=cfg_p.images_scale,
+            vlm_prompt=cfg_p.vlm_prompt or PAPER_PROFILE.vlm_prompt,
+            extraction_format=cfg_p.extraction_format,
+        )
+    return prof, "default", {}
