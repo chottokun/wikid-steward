@@ -76,20 +76,22 @@ class QdrantKnowledgeIndexer:
         self.location = location or cfg.vector_db.url
 
         # Qdrant クライアント設定
+        qdrant_api_key = getattr(cfg.vector_db, "api_key", None) or None
         if self.location.startswith("http://") or self.location.startswith("https://"):
-            self.client = QdrantClient(url=self.location)
+            self.client = QdrantClient(url=self.location, api_key=qdrant_api_key)
         elif self.location == ":memory:":
             self.client = QdrantClient(location=":memory:")
         else:
-            self.client = QdrantClient(path=self.location)
+            self.client = QdrantClient(path=self.location, api_key=qdrant_api_key)
 
         # 汎用 OpenAI 互換 Embedding クライアント
         if embedding_client:
             self.embedding_client = embedding_client
         else:
+            emb_api_key = cfg.vector_db.embedding_api_key or cfg.llm.api_key
             self.embedding_client = OpenAICompatibleEmbeddingClient(
                 base_url=cfg.vector_db.embedding_base_url,
-                api_key=cfg.llm.api_key,
+                api_key=emb_api_key,
                 model=cfg.vector_db.embedding_model,
             )
 

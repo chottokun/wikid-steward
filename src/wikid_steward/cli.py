@@ -50,7 +50,9 @@ def search(query: str, dir: Path, top_k: int):
     """Run LLM-Wiki Graph-Augmented Search over wiki/ directory"""
     click.echo(f"🔍 Running Wiki-Graph Search for query: '{query}'...")
 
-    wiki_dir = dir / "wiki"
+    from wikid_steward.core.config import get_config
+    cfg = get_config()
+    wiki_dir = dir / cfg.paths.wiki_dir
     if not wiki_dir.exists():
         click.echo(f"Warning: wiki directory not found at {wiki_dir}")
 
@@ -89,7 +91,9 @@ def search(query: str, dir: Path, top_k: int):
 )
 def moc(dir: Path):
     """Generate dynamic Map of Content (index.md) for all categories in wiki/"""
-    wiki_dir = dir / "wiki"
+    from wikid_steward.core.config import get_config
+    cfg = get_config()
+    wiki_dir = dir / cfg.paths.wiki_dir
     click.echo(f"🗺️ Generating dynamic MOCs for {wiki_dir}...")
     from wikid_steward.core.moc_generator import generate_all_mocs
 
@@ -109,7 +113,9 @@ def moc(dir: Path):
 )
 def lint(dir: Path):
     """Lint and verify integrity of wiki/ knowledge base"""
-    wiki_dir = dir / "wiki"
+    from wikid_steward.core.config import get_config
+    cfg = get_config()
+    wiki_dir = dir / cfg.paths.wiki_dir
     click.echo(f"🛡️ Running Knowledge Lint & Self-Healing audit for {wiki_dir}...")
     from wikid_steward.core.linter import KnowledgeLinter
 

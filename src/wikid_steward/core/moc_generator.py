@@ -33,11 +33,13 @@ def generate_moc_for_directory(dir_path: Path, base_wiki_dir: Path) -> Path:
 
     doc_entries.sort(key=lambda x: x[0])
 
+    from wikid_steward.core.config import get_config
+    cfg = get_config()
     frontmatter = generate_okf_frontmatter(
         doc_id=f"moc_{dir_path.name}",
         title=f"Map of Content: {category_name}",
         doc_type="Map of Content",
-        source_path=f"wiki/{category_name}",
+        source_path=f"{cfg.paths.wiki_dir}/{category_name}",
     )
 
     body = [

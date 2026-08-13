@@ -99,12 +99,15 @@ class KnowledgeParser:
         """
         path = Path(file_path)
 
-        vlm_enabled = False
-        vlm_provider = "ollama"
-        vlm_model = "qwen3.5:4b"
-        vlm_endpoint = "http://localhost:11434"
-        vlm_api_key = ""
-        vlm_prompt = "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
+        from wikid_steward.core.config import get_config
+        app_cfg = get_config()
+
+        vlm_enabled = app_cfg.vlm.enabled
+        vlm_provider = app_cfg.vlm.provider
+        vlm_model = app_cfg.vlm.model
+        vlm_endpoint = app_cfg.vlm.endpoint
+        vlm_api_key = app_cfg.vlm.api_key
+        vlm_prompt = app_cfg.vlm.prompt
 
         if profile is not None:
             vlm_enabled = getattr(profile, "vlm_enabled", vlm_enabled)
