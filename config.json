@@ -1,0 +1,62 @@
+{
+  "llm": {
+    "provider": "ollama",
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "ollama",
+    "model": "gemma4:latest",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "vlm": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "qwen3.5:4b",
+    "endpoint": "http://localhost:11434",
+    "prompt": "この画像の内容（図表、回路、フローチャート、テキスト等）を日本語でわかりやすく要約してください。"
+  },
+  "paths": {
+    "raw_dir": "_raw",
+    "raw_sources_dir": "raw_sources",
+    "staging_dir": "staging",
+    "wiki_dir": "wiki"
+  },
+  "profiles": {
+    "paper": {
+      "doc_type": "Academic Paper",
+      "do_ocr": false,
+      "images_scale": 2.0
+    },
+    "drawing": {
+      "doc_type": "Technical Drawing",
+      "do_ocr": true,
+      "images_scale": 3.0
+    }
+  },
+  "relinker": {
+    "stop_words": [
+      "AI",
+      "NLP",
+      "LLM",
+      "LLMS",
+      "DATA",
+      "OUTPUT",
+      "FILE",
+      "PDF",
+      "PAPER",
+      "MODEL",
+      "SYSTEM"
+    ],
+    "min_term_length": 3
+  },
+  "vector_db": {
+    "provider": "qdrant",
+    "url": "http://localhost:6333",
+    "collection_name": "wikid_steward_knowledge",
+    "max_context_tokens": 4000,
+    "embedding_provider": "ollama",
+    "embedding_base_url": "http://localhost:11434/v1",
+    "embedding_model": "qwen3-embedding:0.6b",
+    "max_hub_degree": 25,
+    "max_traversal_tokens": 1200
+  }
+}

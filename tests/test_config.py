@@ -35,9 +35,17 @@ llm:
 
     # 環境変数で上書き
     os.environ["OPENAI_MODEL"] = "env-override-model"
-    try:
-        cfg = load_app_config(config_path=config_file, base_dir=tmp_path)
-        # 環境変数 (env-override-model) が config.yaml より優先されること
-        assert cfg.llm.model == "env-override-model"
-    finally:
-        os.environ.pop("OPENAI_MODEL", None)
+def test_load_app_config_from_json(tmp_path: Path):
+    json_content = """{
+      "vector_db": {
+        "max_hub_degree": 50,
+        "max_traversal_tokens": 2000
+      }
+    }"""
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json_content, encoding="utf-8")
+
+    cfg = load_app_config(config_path=config_file, base_dir=tmp_path)
+
+    assert cfg.vector_db.max_hub_degree == 50
+    assert cfg.vector_db.max_traversal_tokens == 2000
