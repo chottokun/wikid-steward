@@ -72,6 +72,8 @@ class VectorDBSettings:
     embedding_provider: str = "ollama"  # "ollama", "openai", "fastembed"
     embedding_base_url: str = "http://localhost:11434/v1"
     embedding_model: str = "qwen3-embedding:0.6b"
+    max_hub_degree: int = 25  # 巨大ハブノード度数閾値
+    max_traversal_tokens: int = 1200  # 1-Hop 巡回読み込みトークン上限
 
 
 @dataclass
@@ -172,6 +174,8 @@ def load_app_config(
                 cfg.vector_db.embedding_provider = d.get("embedding_provider", cfg.vector_db.embedding_provider)
                 cfg.vector_db.embedding_base_url = d.get("embedding_base_url", cfg.vector_db.embedding_base_url)
                 cfg.vector_db.embedding_model = d.get("embedding_model", cfg.vector_db.embedding_model)
+                cfg.vector_db.max_hub_degree = int(d.get("max_hub_degree", cfg.vector_db.max_hub_degree))
+                cfg.vector_db.max_traversal_tokens = int(d.get("max_traversal_tokens", cfg.vector_db.max_traversal_tokens))
 
         except Exception as e:
             print(f"Warning: Failed to load config file {target_config}: {e}")

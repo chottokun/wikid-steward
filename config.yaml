@@ -72,3 +72,5 @@ vector_db:
   embedding_provider: "ollama"  # "ollama", "openai", "fastembed"
   embedding_base_url: "http://localhost:11434/v1"
   embedding_model: "qwen3-embedding:0.6b"
+  max_hub_degree: 25            # 巨大ハブノード度数閾値 (これを超えたら簡易参照化)
+  max_traversal_tokens: 1200    # 1-Hop 巡回読み込みトークン上限

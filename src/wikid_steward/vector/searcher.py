@@ -68,31 +68,61 @@ class WikiGraphSearchEngine:
             content = payload.get("content", "")
             found = re.findall(r"\[\[(.*?)\]\]", content)
             for term in found:
-                if term.upper() not in {"AI", "NLP", "LLM", "DATA", "PDF"} and len(term) > 2:
+                if len(term) >= 2:
                     wikilinks_found.add(term)
 
         # クエリ単体からの用語一致も補完
         for term_candidate in query.split():
             clean_candidate = re.sub(r"[^\w\-]", "", term_candidate)
-            if len(clean_candidate) > 3 and clean_candidate.upper() not in {"WHAT", "WITH", "THAT", "THIS", "FROM", "HAVE"}:
+            if len(clean_candidate) >= 2 and clean_candidate.upper() not in {"WHAT", "WITH", "THAT", "THIS", "FROM", "HAVE", "AND"}:
                 wikilinks_found.add(clean_candidate)
 
         # 1-Hop グラフ巡回: 用語説明ノート (wiki/glossary/) を自動追跡
         glossary_hits = []
         glossary_dir = wiki_path / "glossary"
 
-        for term in list(wikilinks_found)[:5]:
-            # 用語スラグの検索
+        max_hub_degree = self.cfg.vector_db.max_hub_degree
+        max_traversal_tokens = self.cfg.vector_db.max_traversal_tokens
+        accumulated_tokens = 0
+
+        # 全 Markdown ファイルをロード（度数カウント用）
+        all_md_texts = [f.read_text(encoding="utf-8") for f in wiki_path.glob("**/*.md")]
+
+        for term in list(wikilinks_found)[:10]:
+            # 度数 (Degree) の計算: 全 Vault 内での言及回数
+            degree = sum(len(re.findall(re.escape(term), txt, re.IGNORECASE)) for txt in all_md_texts)
+
+            # ① 度数閾値フィルター (Degree Cutoff)
+            if degree >= max_hub_degree:
+                glossary_hits.append(
+                    {
+                        "term": term,
+                        "file": f"{term.lower()}.md",
+                        "content": f"[[{term}]] (巨大ハブノード: 言及度数 {degree} 件のため簡易参照)",
+                        "is_hub": True,
+                    }
+                )
+                continue
+
+            # ② 用語説明ノートのロード ＋ トークンバジェット制御
             for g_file in glossary_dir.glob("*.md"):
                 g_content = g_file.read_text(encoding="utf-8")
                 if term.lower() in g_content.lower() or term.lower() in g_file.stem.lower():
-                    # 用語定義を取得
                     lines = [line for line in g_content.splitlines() if not line.startswith("---")]
+                    snippet = "\n".join(lines[:10]).strip()
+                    token_cost = len(snippet) // 3  # おおよそのトークン数概算
+
+                    if accumulated_tokens + token_cost > max_traversal_tokens:
+                        # 1-Hop トークンバジェット上限到達 -> 打ち切り
+                        break
+
+                    accumulated_tokens += token_cost
                     glossary_hits.append(
                         {
                             "term": term,
                             "file": g_file.name,
-                            "content": "\n".join(lines[:10]).strip(),
+                            "content": snippet,
+                            "is_hub": False,
                         }
                     )
                     break
@@ -107,7 +137,7 @@ class WikiGraphSearchEngine:
             )
 
         if glossary_hits:
-            context_blocks.append("=== 巡回抽出された WikiLink 用語定義 (1-Hop) ===")
+            context_blocks.append(f"=== 巡回抽出された WikiLink 用語定義 (1-Hop, トークン消費: {accumulated_tokens}/{max_traversal_tokens}) ===")
             for g in glossary_hits:
                 context_blocks.append(f"・[[{g['term']}]]:\n{g['content']}\n")
 
