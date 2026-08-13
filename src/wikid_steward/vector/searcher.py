@@ -40,7 +40,10 @@ class WikiGraphSearchEngine:
         wiki_path = Path(wiki_dir)
 
         # クエリのベクトル化と Qdrant 検索
-        query_vector = list(self.indexer.embedding_model.embed([query]))[0].tolist()
+        query_vectors = self.indexer.embed_texts([query])
+        if not query_vectors:
+            return SearchResult(query=query, main_hits=[], traversed_glossary_terms=[], integrated_answer="埋め込み生成に失敗しました。")
+        query_vector = query_vectors[0]
 
         try:
             q_res = self.indexer.client.query_points(
@@ -65,9 +68,14 @@ class WikiGraphSearchEngine:
             content = payload.get("content", "")
             found = re.findall(r"\[\[(.*?)\]\]", content)
             for term in found:
-                # 巨大ハブノード・短語のフィルタリング
                 if term.upper() not in {"AI", "NLP", "LLM", "DATA", "PDF"} and len(term) > 2:
                     wikilinks_found.add(term)
+
+        # クエリ単体からの用語一致も補完
+        for term_candidate in query.split():
+            clean_candidate = re.sub(r"[^\w\-]", "", term_candidate)
+            if len(clean_candidate) > 3 and clean_candidate.upper() not in {"WHAT", "WITH", "THAT", "THIS", "FROM", "HAVE"}:
+                wikilinks_found.add(clean_candidate)
 
         # 1-Hop グラフ巡回: 用語説明ノート (wiki/glossary/) を自動追跡
         glossary_hits = []

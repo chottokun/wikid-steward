@@ -69,6 +69,9 @@ class VectorDBSettings:
     url: str = "http://localhost:6333"
     collection_name: str = "wikid_steward_knowledge"
     max_context_tokens: int = 4000
+    embedding_provider: str = "ollama"  # "ollama", "openai", "fastembed"
+    embedding_base_url: str = "http://localhost:11434/v1"
+    embedding_model: str = "qwen3-embedding:0.6b"
 
 
 @dataclass
@@ -166,6 +169,9 @@ def load_app_config(
                 cfg.vector_db.url = d.get("url", cfg.vector_db.url)
                 cfg.vector_db.collection_name = d.get("collection_name", cfg.vector_db.collection_name)
                 cfg.vector_db.max_context_tokens = int(d.get("max_context_tokens", cfg.vector_db.max_context_tokens))
+                cfg.vector_db.embedding_provider = d.get("embedding_provider", cfg.vector_db.embedding_provider)
+                cfg.vector_db.embedding_base_url = d.get("embedding_base_url", cfg.vector_db.embedding_base_url)
+                cfg.vector_db.embedding_model = d.get("embedding_model", cfg.vector_db.embedding_model)
 
         except Exception as e:
             print(f"Warning: Failed to load config file {target_config}: {e}")

@@ -26,10 +26,10 @@ def generate_moc_for_directory(dir_path: Path, base_wiki_dir: Path) -> Path:
             if len(parts) >= 3:
                 import yaml
                 meta = yaml.safe_load(parts[1]) or {}
-                title = meta.get("title", title)
-                doc_type = meta.get("type", doc_type)
+                title = str(meta.get("title", title))
+                doc_type = str(meta.get("type", doc_type))
 
-        doc_entries.append((title, doc_type, f.name))
+        doc_entries.append((str(title), str(doc_type), f.name))
 
     doc_entries.sort(key=lambda x: x[0])
 

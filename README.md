@@ -1,28 +1,28 @@
 # wikid-steward
 
-> **LLM Wiki Simple Reboot Engine (v5) & Knowledge Manager**  
-> 原本ドキュメント（PDF/DOCX/PPTX/XLSX等）から高精度な構造化 Markdown とアセットを自動抽出・カプセル化し、人間介在型レビュー (HITL) と不変のトレーサビリティを両立するナレッジ管理システム。
+> **LLM Wiki Reboot Engine & Knowledge Steward (v5.0)**  
+> 原本ドキュメント（PDF/DOCX/PPTX/XLSX等）から高精度な構造化 Markdown とアセットを自動抽出・カプセル化し、VLM画像要約、用語自動抽出、WikiLink 相互結合、Qdrant グラフ拡張検索、動的 MOC、およびセルフヒーリング健全性監査を統括する次世代ナレッジ管理エンジン。
 
 ---
 
 ## 🌟 主な特徴 (Key Features)
 
 * **4層ナレッジ・ライフサイクル管理**:
-  * `_raw/` (投入) ➔ `staging/` (検証) ➔ `wiki/` (公開) & `raw_sources/` (退避)
+  * `_raw/` (投入) ➔ `staging/` (検証) ➔ `wiki/` (公開 Vault) & `raw_sources/` (原本退避)
   * 原本バイナリを `wiki/`（Obsidian Vault）に混入させず、Git リポジトリの軽量性を維持。
-* **決定論的 Slug 命名規則**:
-  * Unicode NFC 正規化（macOS NFD 濁点分解の解消）、日本語保護、UTF-8 100 バイト安全切り詰め。
-* **高精度構造化パース (`chottokun/docling-markdown-generator` 直結)**:
-  * Docling v2.x をベースに、結合セルを維持した HTML `<table>` 出力、LaTeX 数式認識 (`$$ ... $$`)。
-* **2層ハイブリッドメタデータ (層A + 層B)**:
-  * **【層A】 Markdown Frontmatter**: Google OKF v0.2 スキーマ適合の可変メタデータ。
-  * **【層B】 PNG `tEXt` チャンク**: Pillow を用いた画像バイナリ内部への不変メタデータ焼き込み (`llm_wiki_meta`)。
-* **3段階パースプロファイル制御 (Parse Profile Control)**:
-  * 優先度1: サイドカー YAML (`file.yaml`) ➔ 優先度2: フォルダ名判定 ➔ 優先度3: 完全デフォルト。
-  * **論文プロファイル (`paper`)**: OCR オフ、デジタル精度・LaTeX重視。
-  * **図面プロファイル (`drawing`)**: OCR オン、高解像度 3.0 倍切り出し、**SBOM (部品構成表) の構造化 HTML `<table>` 自動抽出**。
-* **拡張可能なカスタムハンドラー基盤 (`BaseProfileHandler`)**:
-  * 独自パターンに応じたパース後処理コードやカスタムアセット抽出ロジックをプラグイン形式で簡単に追加・オーバーライド可能。
+* **VLM (Vision Language Model) による画像日本語自動要約**:
+  * Docker 上の Ollama (Ollama / OpenAI 互換 API) と連携し、図表やCAD図面の内容を日本語で高度に自動解釈・要約。
+* **LLM 用語自動抽出 (`GlossaryExtractor`) ＆ 堅牢型 WikiRelinker (`relinker.py`)**:
+  * 本文から専門用語・核心概念を自動検出し `wiki/glossary/{slug}.md` を自動作成。
+  * セグメント分離 ＋ 1パス最長一致置換アルゴリズムにより、**ネスト破綻 `[[[[...]]]]` や過剰リンクを 100% 回避して未リンク単語を `[[用語名]]` に自動相互結合**。
+* **Qdrant ベクトル DB 統合 ＆ Wiki グラフ拡張検索 (`wikid-steward search`)**:
+  * 単なるベクトル類似度検索を超え、ヒューマン/AIが編み上げた **`[[用語名]]` やバックリンクを 1-Hop 自律巡回して前提定義・背景知識を一括合成したレポート回答** を出力。
+* **動的 MOC (Map of Content) 自動編成 (`wikid-steward moc`)**:
+  * ドキュメントの追加・更新に応じて、カテゴリ別の体系的目次マップ (`index.md`) を AI が動的編み直し。
+* **ナレッジ健全性監査 ＆ セルフヒーリング (`wikid-steward lint`)**:
+  * 壊れた画像パス `![alt](assets/...)`、Frontmatter 欠損、孤立ノートを全自動検出。
+* **網羅的ハイブリッド設定システム (`config.yaml` ＋ `.env`)**:
+  * LLM 接続先、VLM オプション、4層パス、プロファイルポリシーを外部設定ファイルから全カスタマイズ可能。
 
 ---
 
@@ -35,72 +35,67 @@
 git clone https://github.com/chottokun/wikid-steward.git
 cd wikid-steward
 
-# 依存関係のセットアップ (docling-lib, pillow, watchdog 等)
+# 依存関係のセットアップ (docling-lib, openai, qdrant-client, fastembed, pillow 等)
 uv sync
 ```
 
 ---
 
-## 🚀 クイックスタート (使用方法)
+## 🚀 CLI コマンドガイド (Usage)
 
-### 1. リアルタイム監視デーモンの起動
-
+### 1. リアルタイム監視デーモンの起動 (`run`)
 ```bash
 uv run wikid-steward run
 ```
+`_raw/`（原本投入）および `staging/`（承認待機）をリアルタイムに監視・自動処理します。
 
-デーモンが常駐し、`_raw/` ディレクトリ（原本投入）および `staging/` ディレクトリ（昇格判定）をリアルタイムに監視します。
+### 2. LLM-Wiki グラフ拡張検索 (`search`)
+```bash
+uv run wikid-steward search "What is LLM-as-a-judge evaluation?"
+```
+Qdrant ベクトル検索 ＋ 1-Hop WikiLink グラフ巡回 ＋ `gemma4:latest` を統合し、用語定義や背景文脈が整理された回答レポートを返します。
 
-### 2. ドキュメントの投入から昇格までの流れ
+### 3. 動的 MOC (Map of Content) の一括自動更新 (`moc`)
+```bash
+uv run wikid-steward moc
+```
+`wiki/` 内の全サブカテゴリに `index.md` (目次ツリー・ドキュメント一覧) を動的生成・最新化します。
 
-1. **原本の投入**:
-   * 原本 PDF などを `_raw/` 配下に配置（例: `_raw/drawings/component.pdf` や `_raw/papers/paper.pdf`）。
-   * サイドカー指定を行いたい場合は横に `component.yaml` を配置。
-2. **Staging での検証**:
-   * パース結果が `staging/` 配下にノートおよび `assets/` フォルダとして自動生成されます。
-3. **人間によるレビュー (HITL) ＆ 昇格**:
-   * Obsidian や VS Code で `staging/` 内のノートを開き、YAML ヘッダーを `status: "reviewed"` に書き換えて保存。
-   * デーモンが 1 秒のデバウンス窓で検知し、ノートとアセットが `wiki/` へ物理移動 (`shutil.move`) され、原本が `raw_sources/` へ自動退避移動・Git コミットされます。
+### 4. ナレッジベース健全性監査 (`lint`)
+```bash
+uv run wikid-steward lint
+```
+画像リンク切れ、Frontmatter 欠損、孤立ノートを走査し、健全性を 100% 保証します。
 
 ---
 
-## 🧩 カスタムプロファイルハンドラーの追加方法
+## ⚙️ 外部設定 (`config.yaml` ＆ `.env`)
 
-特定のパターン（独自のCAD図面、社内仕様書など）に向けたカスタムコードを追加したい場合、`BaseProfileHandler` を継承して登録します。
+環境変数 (`.env`) > `config.yaml` > デフォルト値 の優先順位で読み込まれます。
 
-```python
-from wikid_steward.core.handlers import BaseProfileHandler, register_profile_handler
+```yaml
+# config.yaml
+llm:
+  provider: "ollama"
+  base_url: "http://localhost:11434/v1"
+  model: "gemma4:latest"
 
-class MyCustomHandler(BaseProfileHandler):
-    def post_process_markdown(self, markdown_text: str, profile_name: str) -> str:
-        # カスタムパース後処理コード
-        header = f"> [!tip] 📌 カスタムプロファイル ({profile_name}) 処理済み\n\n"
-        return header + markdown_text
+vlm:
+  enabled: true
+  provider: "ollama"
+  model: "qwen3.5:4b"
 
-# プロファイル名と紐づけて登録
-register_profile_handler("my_pattern", MyCustomHandler())
+paths:
+  raw_dir: "_raw"
+  staging_dir: "staging"
+  wiki_dir: "wiki"
 ```
 
-※ 詳細なテンプレートとガイドは [`Docs/architecture/handlers.md`](file:///home/nobuhiko/Project/wikid-steward/Docs/architecture/handlers.md) をご覧ください。
-
 ---
 
-## 🧪 テストの実行
+## 🧪 テスト実行
 
 ```bash
-# 全単体・統合テストの実行 (Pytest)
+# 全 38 件の単体・結合テストの実行
 uv run pytest
 ```
-
-`.gitignore` により、原本 PDF やテスト用一時生成物は Git リポジトリに入らないよう厳格に防護されています。
-
----
-
-## 📚 ドキュメント (OKF 仕様)
-
-* 📄 [Docs/index.md](./Docs/index.md) - ナレッジベース最上位インデックス
-* 📄 [Docs/domain/lifecycle.md](./Docs/domain/lifecycle.md) - 4層ナレッジ・ライフサイクル仕様
-* 📄 [Docs/domain/slug.md](./Docs/domain/slug.md) - スラッグ生成・規格化命名規則
-* 📄 [Docs/architecture/parser.md](./Docs/architecture/parser.md) - Docling 統合仕様
-* 📄 [Docs/architecture/metadata.md](./Docs/architecture/metadata.md) - 2層メタデータ設計
-* 📄 [Docs/architecture/handlers.md](./Docs/architecture/handlers.md) - カスタムハンドラー追加ガイド

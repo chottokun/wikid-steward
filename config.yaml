@@ -69,3 +69,6 @@ vector_db:
   url: "http://localhost:6333"
   collection_name: "wikid_steward_knowledge"
   max_context_tokens: 4000
+  embedding_provider: "ollama"  # "ollama", "openai", "fastembed"
+  embedding_base_url: "http://localhost:11434/v1"
+  embedding_model: "qwen3-embedding:0.6b"
