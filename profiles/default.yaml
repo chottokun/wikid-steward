@@ -1,0 +1,7 @@
+# General Default Document Profile Sub-Config
+doc_type: "General Document"
+do_ocr: false
+images_scale: 2.0
+extraction_format: "markdown"
+vlm_prompt: |
+  この画像の内容（図表、テキスト、構成図等）を日本語で分かりやすく1〜2文程度で簡潔に説明してください。

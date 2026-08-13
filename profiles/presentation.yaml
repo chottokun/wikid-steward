@@ -1,0 +1,7 @@
+# Presentation / Slide Profile Sub-Config
+doc_type: "Presentation"
+do_ocr: false
+images_scale: 2.0
+extraction_format: "markdown"
+vlm_prompt: |
+  このスライド画像のタイトル、箇条書きのキーポイント、および視覚要素の要約を日本語で要約してください。

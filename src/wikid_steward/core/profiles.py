@@ -35,12 +35,6 @@ PAPER_PROFILE = ParseProfile(
     do_ocr=False,
     images_scale=2.0,
     extraction_format="markdown",
-    vlm_prompt=(
-        "この論文中の図表（グラフ、構成図、概念図）の内容を日本語で解説してください：\n"
-        "1. X軸・Y軸のラベル、単位、および比較条件\n"
-        "2. 手法やモデル間の性能差、数値の増減傾向\n"
-        "3. 図が示している核心的な結論やメッセージ"
-    ),
 )
 
 # 2. 技術図面プロファイル (Technical Drawing) - 寸法・公差・照合番号特化
@@ -48,14 +42,8 @@ DRAWING_PROFILE = ParseProfile(
     name="drawing",
     doc_type="Technical Drawing",
     do_ocr=True,
-    images_scale=3.0,  # 超高解像度 3.0x (文字潰れ防止)
+    images_scale=3.0,
     extraction_format="markdown",
-    vlm_prompt=(
-        "この技術図面・機構図から以下の重要情報を精度高く抽出・解釈してください：\n"
-        "1. 図面内の主要寸法値および公差表記（例: 15.0±0.05mm, Φ12, Ra0.8等）\n"
-        "2. 照合番号（バルーン番号・部品No）と幾何公差記号\n"
-        "3. 注記（Material, Surface Finish, General Tolerances）"
-    ),
 )
 
 # 3. 図面 SBOM / 部品構成表プロファイル (Drawing SBOM) - 表構造特化
@@ -64,11 +52,7 @@ DRAWING_SBOM_PROFILE = ParseProfile(
     doc_type="Drawing SBOM",
     do_ocr=True,
     images_scale=2.5,
-    extraction_format="html_table",  # 構造化 HTML/Markdown 表を強制
-    vlm_prompt=(
-        "この部品構成表 (BOM / Parts List) を以下の標準表形式で正確に抽出してください：\n"
-        "| Item (品番) | Part Number (図番) | Description (品名) | Qty (数量) | Material (材質) |"
-    ),
+    extraction_format="html_table",
 )
 
 SPREADSHEET_PROFILE = ParseProfile(
@@ -76,6 +60,7 @@ SPREADSHEET_PROFILE = ParseProfile(
     doc_type="Data Sheet",
     do_ocr=False,
     images_scale=2.0,
+    extraction_format="html_table",
 )
 
 PRESENTATION_PROFILE = ParseProfile(
@@ -83,6 +68,7 @@ PRESENTATION_PROFILE = ParseProfile(
     doc_type="Presentation",
     do_ocr=False,
     images_scale=2.0,
+    extraction_format="markdown",
 )
 
 PROFILES_MAP = {
@@ -201,15 +187,37 @@ def resolve_profile(
             return prof, "directory_policy", {}
 
         if any(kw in folder_str for kw in ["sheet", "excel", "csv", "表データ", "sheets"]):
-            return SPREADSHEET_PROFILE, "directory_policy", {}
+            cfg_p = app_cfg.profiles.get("spreadsheet")
+            prof = SPREADSHEET_PROFILE
+            if cfg_p:
+                prof = ParseProfile(
+                    name="spreadsheet",
+                    doc_type=cfg_p.doc_type,
+                    do_ocr=cfg_p.do_ocr,
+                    images_scale=cfg_p.images_scale,
+                    vlm_prompt=cfg_p.vlm_prompt or SPREADSHEET_PROFILE.vlm_prompt,
+                    extraction_format=cfg_p.extraction_format,
+                )
+            return prof, "directory_policy", {}
 
         if any(kw in folder_str for kw in ["slide", "presentation", "pptx", "発表資料", "slides"]):
-            return PRESENTATION_PROFILE, "directory_policy", {}
+            cfg_p = app_cfg.profiles.get("presentation")
+            prof = PRESENTATION_PROFILE
+            if cfg_p:
+                prof = ParseProfile(
+                    name="presentation",
+                    doc_type=cfg_p.doc_type,
+                    do_ocr=cfg_p.do_ocr,
+                    images_scale=cfg_p.images_scale,
+                    vlm_prompt=cfg_p.vlm_prompt or PRESENTATION_PROFILE.vlm_prompt,
+                    extraction_format=cfg_p.extraction_format,
+                )
+            return prof, "directory_policy", {}
     except Exception:
         pass
 
-    # 3. 優先度 3: デフォルトプロファイル (PAPER_PROFILE)
-    cfg_p = app_cfg.profiles.get("paper")
+    # 3. 優先度 3: デフォルトプロファイル (default.yaml または paper)
+    cfg_p = app_cfg.profiles.get("default") or app_cfg.profiles.get("paper")
     prof = PAPER_PROFILE
     if cfg_p:
         prof = ParseProfile(

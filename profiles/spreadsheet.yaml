@@ -1,0 +1,7 @@
+# Spreadsheet / Data Sheet Profile Sub-Config
+doc_type: "Data Sheet"
+do_ocr: false
+images_scale: 2.0
+extraction_format: "html_table"
+vlm_prompt: |
+  この表計算・データシートから主要なデータ行、ヘッダー、および集計数値を正確な Markdown 表形式で抽出してください。
