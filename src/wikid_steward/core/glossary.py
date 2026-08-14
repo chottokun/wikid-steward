@@ -10,9 +10,9 @@ from wikid_steward.core.slug import generate_slug
 @dataclass
 class GlossaryTerm:
     canonical_title: str
-    slug: str
     aliases: list[str]
-    description: str
+    slug: str = ""
+    description: str = ""
 
 
 class GlossaryExtractor:
