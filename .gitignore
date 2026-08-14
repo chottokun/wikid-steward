@@ -229,6 +229,8 @@ staging/
 scratch/
 test_output/
 test_wiki/
+wiki/*
+!wiki/.gitkeep
 
 # Binary documents & raw media files (Strictly excluded from Git)
 *.pdf

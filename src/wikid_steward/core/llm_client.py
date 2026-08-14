@@ -62,3 +62,19 @@ class OpenAICompatibleLLMClient:
 
         content = response.choices[0].message.content
         return content.strip() if content else ""
+
+    def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        model_override: str | None = None,
+        temperature: float | None = None,
+    ) -> str:
+        """単一プロンプトからテキストを生成する簡易インターフェース"""
+        messages = [{"role": "user", "content": prompt}]
+        return self.generate_chat_completion(
+            messages=messages,
+            system_prompt=system_prompt,
+            model_override=model_override,
+            temperature=temperature,
+        )
