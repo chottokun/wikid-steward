@@ -133,14 +133,30 @@ def generate_okf_frontmatter(
     """旧バージョン互換用 OKF フロントマター生成関数"""
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    provenance_data = {
+        "extracted": 0.90,
+        "inferred": 0.10,
+        "inferred_by": f"wikid-steward/{profile_used}",
+        "profile_used": profile_used,
+        "profile_source": profile_source,
+    }
+
+    custom = custom_metadata or {}
+    legacy_meta = {
+        "id": doc_id,
+        "source": source_path,
+        "provenance": provenance_data,
+        **custom,
+    }
+
     doc = OKFDocumentData(
         doc_type=doc_type,
         title=title,
-        status="draft",
+        status="unreviewed",
         generated=ActorInfo(by=f"wikid-steward/{profile_used}", at=now_iso),
         sources=[SourceEntry(id="source", resource=source_path, title=title)],
         tags=tags or ["raw_ingest"],
-        custom_metadata=custom_metadata or {},
+        custom_metadata=legacy_meta,
     )
     return generate_okf_v7_frontmatter(doc)
 
