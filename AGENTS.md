@@ -1,45 +1,29 @@
-# Project Guide for Agents
+# AGENTS.md
 
-## 📋 Context & Tech Stack
+## 1. Agent Mindset
+* 私は開発者です。あなたは私のエージェントです。
+* **シンプル重視:** 要求された以上のコード変更（過剰構築）は避け、最小限かつ最適な修正にとどめてください。
+* **質問＝読み取り専用:** コードの解説や質問への回答時は、明示的な指示がない限りファイルを編集しないでください。
 
-- **Stack**: Python 3.12+, uv (package manager)
-- **Rule**: NEVER use global Python/pip. ALL execution must use `uv`. Strict type hints required.
+## 2. Tech Stack & Execution
+* **Stack:** Python 3.12+, `uv`
+* **Execution:** グローバル `python` / `pip` の使用は厳禁。**すべて `uv` 経由で実行すること。**
+* **Type System:** 厳格な型ヒントを必須とする。
 
-## Development Rules
+## 3. Mandatory Guidelines
+常に以下を参照すること。
+* `rules/coding-style.md`: コーディングスタイル
+* `rules/testing.md`: テスト戦略・TDD
+* `rules/git.md`: Git 運用ルール
+* `rules/security.md`: セキュリティ要件
+* `rules/ci.md`: CI/CD要件
+* `rules/documents.md`: ドキュメント作成・運用ルール
 
-Follow these rules before and during implementation:
+## 4. Reference Priority
+1. リポジトリ内コード -> 2. `docs/` -> 3. `README.md` -> 4. 公式ドキュメント
+* 実装に合わせて `docs/` や `README.md` を常に最新化すること。
 
-- `docs/coding-style.md` : Code style and Python development rules
-- `docs/hardware_polarity.md` : Tapo C210 ONVIF Hardware Polarity and Movement Rules (NEVER ALTER)
-- `docs/testing.md` : Test strategy and TDD workflow
-- `docs/git.md` : Git workflow and commit rules
-- `docs/security.md` : Security requirements and audits
-
-## ✅ Definition of Done
-
-Task is complete only when all Security Checks and Tests pass, dependencies are clean, and documentation/Git history matches this guide.
-
-## 情報源
-
-実装時は次の順で参照する。
-
-1. リポジトリ内のコード
-2. docs/
-3. README.md
-4. 公式ドキュメント
-
-docs/, README.mdは必要な場合には更新し最新の情報とすること
-
-## Knowledge Rules: 
-
-本プロジェクトのナレッジは docs/ 配下で管理します。記憶のみで回答せず、必ず .agents\skills\llm-wiki-docs\SKILL.md をロードして指示に従ってください。
-
-Immutable Raw: Docs/raw/ 内のソースファイルは編集・上書き・削除を厳禁とします。
-
-役割の割り切り
-AGENTS.md の役割（When / Where）:
-「ナレッジは Docs/ にある」「手順は SKILL.md を見よ」という存在と制約の宣言のみを行う。  
-
-SKILL.md の役割（How）:
-Docs/index.md の読み方、sources フロントマターの書き方、log.md の更新方法など、具体的な処理アルゴリズムをすべて記述する。
-
+## 5. Knowledge Base & Skills
+* **Knowledge Store:** ナレッジは `docs/` 配下で管理。
+* **Skill Load Required:** ナレッジ調査・ドキュメント作成時は、自力で回答せず `.agents/skills/llm-wiki-docs/SKILL.md` をロードして指示に従うこと。
+* **Immutable Rules:** `docs/raw/` 内のソースファイルは編集・上書き・削除を一切禁止する。
