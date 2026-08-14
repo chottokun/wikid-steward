@@ -1,4 +1,4 @@
-# wikid-steward Comprehensive Configuration
+# wikid-steward Comprehensive Configuration (v7.0)
 # Note: Sensitive variables (like credentials, API keys) should be placed in your `.env` file instead.
 # Environment variables will override any values configured here.
 
@@ -10,6 +10,7 @@ llm:
   model: "gemma4:latest"
   temperature: 0.2
   max_tokens: 2048
+  target_language: "Japanese"     # 出力言語の統一（多言語統制）
 
 # 2. VLM 画像自動要約設定
 vlm:
@@ -20,15 +21,17 @@ vlm:
   api_key: ""                     # 機微なAPIキーは .env (VLM_API_KEY) に書くことを推奨します
   prompt: "この画像の概要を1〜2文程度で簡潔に日本語で説明してください。"
 
-# 3. 4層ライフサイクル・ディレクトリ構成設定
+# 3. ディレクトリ構成設定
 paths:
   raw_dir: "_raw"
   raw_sources_dir: "raw_sources"
   staging_dir: "staging"
   wiki_dir: "wiki"
+  stubs_dir: "wiki/stubs"         # 未定義スタブ隔離ディレクトリ
 
 # 4. 用語抽出 & 相互 WikiLink 防護設定
 relinker:
+  mode: "first_hit_per_section"   # "first_hit_per_section" (大見出しごとに初回のみ) または "all"
   stop_words:
     - "AI"
     - "NLP"
@@ -43,7 +46,11 @@ relinker:
     - "SYSTEM"
   min_term_length: 3
 
-# 5. ベクトル DB (Qdrant) & 1-Hop グラフ拡張検索設定
+# 5. バックリンク自動逆合成 (Retro-Compilation) 設定
+retro_compilation:
+  min_backlinks: 3                # 自動逆合成をトリガーする最小被リンク数 (N)
+
+# 6. ベクトル DB (Qdrant) & 1-Hop グラフ拡張検索設定
 vector_db:
   provider: "qdrant"
   url: "http://localhost:6333"

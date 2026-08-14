@@ -16,6 +16,7 @@ class LLMSettings:
     model: str = "gemma4:latest"
     temperature: float = 0.2
     max_tokens: int = 2048
+    target_language: str = "Japanese"
 
 
 @dataclass
@@ -34,6 +35,7 @@ class PathSettings:
     raw_sources_dir: str = "raw_sources"
     staging_dir: str = "staging"
     wiki_dir: str = "wiki"
+    stubs_dir: str = "wiki/stubs"
 
 
 @dataclass
@@ -64,6 +66,12 @@ class RelinkerSettings:
         ]
     )
     min_term_length: int = 3
+    mode: str = "first_hit_per_section"  # "first_hit_per_section" | "all"
+
+
+@dataclass
+class RetroCompilationSettings:
+    min_backlinks: int = 3
 
 
 @dataclass
@@ -109,6 +117,9 @@ class AppConfig:
         }
     )
     relinker: RelinkerSettings = field(default_factory=RelinkerSettings)
+    retro_compilation: RetroCompilationSettings = field(
+        default_factory=RetroCompilationSettings
+    )
     vector_db: VectorDBSettings = field(default_factory=VectorDBSettings)
     config_file_path: Path | None = None
 
@@ -144,6 +155,7 @@ def load_app_config(
                 cfg.llm.model = d.get("model", cfg.llm.model)
                 cfg.llm.temperature = float(d.get("temperature", cfg.llm.temperature))
                 cfg.llm.max_tokens = int(d.get("max_tokens", cfg.llm.max_tokens))
+                cfg.llm.target_language = d.get("target_language", cfg.llm.target_language)
 
             # 2. VLM 設定
             if "vlm" in data and isinstance(data["vlm"], dict):
@@ -162,6 +174,7 @@ def load_app_config(
                 cfg.paths.raw_sources_dir = d.get("raw_sources_dir", cfg.paths.raw_sources_dir)
                 cfg.paths.staging_dir = d.get("staging_dir", cfg.paths.staging_dir)
                 cfg.paths.wiki_dir = d.get("wiki_dir", cfg.paths.wiki_dir)
+                cfg.paths.stubs_dir = d.get("stubs_dir", cfg.paths.stubs_dir)
 
             # 4. Profiles 設定 (config.yaml 内 + profiles/ ディレクトリからのサブコンフィグ)
             if "profiles" in data and isinstance(data["profiles"], dict):
@@ -203,8 +216,16 @@ def load_app_config(
                 if "stop_words" in d and isinstance(d["stop_words"], list):
                     cfg.relinker.stop_words = d["stop_words"]
                 cfg.relinker.min_term_length = int(d.get("min_term_length", cfg.relinker.min_term_length))
+                cfg.relinker.mode = d.get("mode", cfg.relinker.mode)
 
-            # 6. Vector DB 設定
+            # 6. Retro Compilation 設定
+            if "retro_compilation" in data and isinstance(data["retro_compilation"], dict):
+                d = data["retro_compilation"]
+                cfg.retro_compilation.min_backlinks = int(
+                    d.get("min_backlinks", cfg.retro_compilation.min_backlinks)
+                )
+
+            # 7. Vector DB 設定
             if "vector_db" in data and isinstance(data["vector_db"], dict):
                 d = data["vector_db"]
                 cfg.vector_db.provider = d.get("provider", cfg.vector_db.provider)
@@ -248,6 +269,8 @@ def load_app_config(
         cfg.llm.temperature = float(os.environ["LLM_TEMPERATURE"])
     if os.getenv("LLM_MAX_TOKENS"):
         cfg.llm.max_tokens = int(os.environ["LLM_MAX_TOKENS"])
+    if os.getenv("LLM_TARGET_LANGUAGE"):
+        cfg.llm.target_language = os.environ["LLM_TARGET_LANGUAGE"]
 
     # 2. VLM
     if os.getenv("VLM_ENABLED"):
@@ -280,6 +303,10 @@ def load_app_config(
         cfg.paths.wiki_dir = os.environ["PATHS_WIKI_DIR"]
     elif os.getenv("WIKI_DIR"):
         cfg.paths.wiki_dir = os.environ["WIKI_DIR"]
+    if os.getenv("PATHS_STUBS_DIR"):
+        cfg.paths.stubs_dir = os.environ["PATHS_STUBS_DIR"]
+    elif os.getenv("STUBS_DIR"):
+        cfg.paths.stubs_dir = os.environ["STUBS_DIR"]
 
     # 4. Relinker
     if os.getenv("RELINKER_STOP_WORDS"):
@@ -287,7 +314,11 @@ def load_app_config(
     if os.getenv("RELINKER_MIN_TERM_LENGTH"):
         cfg.relinker.min_term_length = int(os.environ["RELINKER_MIN_TERM_LENGTH"])
 
-    # 5. Vector DB
+    # 5. Retro Compilation
+    if os.getenv("RETRO_COMPILATION_MIN_BACKLINKS"):
+        cfg.retro_compilation.min_backlinks = int(os.environ["RETRO_COMPILATION_MIN_BACKLINKS"])
+
+    # 6. Vector DB
     if os.getenv("VECTOR_DB_PROVIDER"):
         cfg.vector_db.provider = os.environ["VECTOR_DB_PROVIDER"]
     if os.getenv("VECTOR_DB_URL"):
