@@ -108,6 +108,7 @@ class DocumentToOKFCompiler:
         hide_source_links: bool = False,
         extract_terms: bool = True,
         profile_name: str | None = None,
+        auto_moc: bool | None = None,
     ) -> CompilationResult:
         """単一ドキュメントファイルを OKF v0.2 準拠の Markdown 群にコンパイルする。
 
@@ -260,8 +261,14 @@ class DocumentToOKFCompiler:
 
         if extract_terms:
             extractor = GlossaryExtractor(llm_client=self.llm_client)
-            # ルールベース/LLM抽出
-            extracted_terms = extractor.extract_terms(raw_extracted_text)
+            max_chars = (
+                None
+                if self.config.compiler.extract_full_text
+                else self.config.compiler.max_extract_chars
+            )
+            extracted_terms = extractor.extract_terms(
+                raw_extracted_text, max_chars=max_chars
+            )
 
             today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -389,6 +396,18 @@ class DocumentToOKFCompiler:
         )
         main_note_path.write_text(final_main_content, encoding="utf-8")
 
+        # 7. MOC (index.md) の自動同期
+        should_run_moc = (
+            auto_moc if auto_moc is not None else self.config.compiler.auto_moc
+        )
+        if should_run_moc:
+            try:
+                from wikid_steward.core.moc_generator import generate_all_mocs
+
+                generate_all_mocs(wiki_dir)
+            except Exception as e:
+                logger.warning(f"Failed to auto-generate MOC: {e}")
+
         return CompilationResult(
             raw_markdown_path=raw_markdown_path,
             main_note_path=main_note_path,
@@ -407,6 +426,7 @@ class DocumentToOKFCompiler:
         hide_source_links: bool = False,
         extract_terms: bool = True,
         profile_name: str | None = None,
+        auto_moc: bool | None = None,
     ) -> list[CompilationResult]:
         """ディレクトリ内のドキュメント群を一括コンパイルする。"""
         target_dir = Path(dir_path)
@@ -444,9 +464,23 @@ class DocumentToOKFCompiler:
                         hide_source_links=hide_source_links,
                         extract_terms=extract_terms,
                         profile_name=profile_name,
+                        auto_moc=False,  # ディレクトリ処理時は最後にまとめてMOC実行
                     )
                     results.append(res)
                 except Exception as e:
                     logger.error(f"Failed to compile {file_p}: {e}")
+
+        # ディレクトリ一括処理完了時に MOC を同期
+        should_run_moc = (
+            auto_moc if auto_moc is not None else self.config.compiler.auto_moc
+        )
+        if should_run_moc:
+            wiki_dir = output_dir or (self.base_dir / self.config.paths.wiki_dir)
+            try:
+                from wikid_steward.core.moc_generator import generate_all_mocs
+
+                generate_all_mocs(wiki_dir)
+            except Exception as e:
+                logger.warning(f"Failed to auto-generate MOC for directory: {e}")
 
         return results

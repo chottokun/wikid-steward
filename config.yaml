@@ -63,3 +63,11 @@ vector_db:
   embedding_api_key: ""           # 埋め込みAPIキー。機微情報のため .env (VECTOR_DB_EMBEDDING_API_KEY) への記載を推奨します
   max_hub_degree: 25            # 巨大ハブノード度数閾値 (これを超えたら簡易参照化)
   max_traversal_tokens: 1200    # 1-Hop 巡回読み込みトークン上限
+
+# 7. ドキュメントコンパイラ (OKF Compiler) 設定
+compiler:
+  auto_moc: true                 # コンパイル完了時に MOC (index.md) を自動更新
+  extract_full_text: true        # 用語・概念抽出時に全文コンテキストを使用
+  max_extract_chars: 50000       # 用語抽出時の最大文字数上限 (0で無制限)
+  default_status: "draft"        # デフォルトステータス (draft | stable)
+

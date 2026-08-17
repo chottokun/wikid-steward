@@ -24,7 +24,9 @@ class GlossaryExtractor:
     def __init__(self, llm_client: OpenAICompatibleLLMClient | None = None):
         self.llm_client = llm_client or OpenAICompatibleLLMClient()
 
-    def extract_terms(self, text: str) -> list[GlossaryTerm]:
+    def extract_terms(
+        self, text: str, max_chars: int | None = None
+    ) -> list[GlossaryTerm]:
         """テキストから主要な専門用語リストを抽出する"""
         system_prompt = (
             "あなたは高度な技術文書・論文の用語解析AIです。"
@@ -41,7 +43,8 @@ class GlossaryExtractor:
             "]"
         )
 
-        user_prompt = f"以下の本文から専門用語を抽出してください:\n\n{text[:3000]}"
+        input_text = text[:max_chars] if (max_chars and max_chars > 0) else text
+        user_prompt = f"以下の本文から専門用語を抽出してください:\n\n{input_text}"
 
         try:
             raw_response = self.llm_client.generate_chat_completion(

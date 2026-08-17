@@ -286,5 +286,24 @@ def test_compile_all_raw_sources_directory(temp_workspace: Path):
         assert main_fm.get("status") == "stable"
 
 
+def test_compile_auto_moc_generation(temp_workspace: Path):
+    """auto_moc=True 時にコンパイル完了後に MOC (index.md) が自動同期・生成されることを検証"""
+    doc_path = temp_workspace / "network_spec.md"
+    doc_path.write_text("# ネットワーク設計\n\nSDN (Software Defined Networking) の設計。", encoding="utf-8")
+
+    compiler = DocumentToOKFCompiler(base_dir=temp_workspace)
+    res = compiler.compile_file(
+        file_path=doc_path,
+        auto_moc=True,
+    )
+
+    wiki_index = temp_workspace / "wiki" / "index.md"
+    concepts_index = temp_workspace / "wiki" / "concepts" / "index.md"
+
+    # MOC ファイルが自動生成されていること
+    assert wiki_index.exists() or concepts_index.exists()
+
+
+
 
 

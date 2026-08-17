@@ -90,10 +90,24 @@ class VectorDBSettings:
 
 
 @dataclass
+class CompilerSettings:
+    auto_moc: bool = True  # コンパイル完了時に MOC (index.md) を自動更新
+    extract_full_text: bool = True  # 用語・概念抽出時に全文コンテキストを使用
+    max_extract_chars: int = 50000  # 用語抽出時の最大文字数上限 (0で無制限)
+    default_status: str = "draft"  # デフォルトステータス (draft | stable)
+
+
+@dataclass
 class AppConfig:
     llm: LLMSettings = field(default_factory=LLMSettings)
     vlm: VLMSettings = field(default_factory=VLMSettings)
     paths: PathSettings = field(default_factory=PathSettings)
+    compiler: CompilerSettings = field(default_factory=CompilerSettings)
+    relinker: RelinkerSettings = field(default_factory=RelinkerSettings)
+    retro_compilation: RetroCompilationSettings = field(
+        default_factory=RetroCompilationSettings
+    )
+    vector_db: VectorDBSettings = field(default_factory=VectorDBSettings)
     profiles: dict[str, ProfileSetting] = field(
         default_factory=lambda: {
             "paper": ProfileSetting(
@@ -239,6 +253,14 @@ def load_app_config(
                 cfg.vector_db.embedding_api_key = d.get("embedding_api_key", cfg.vector_db.embedding_api_key)
                 cfg.vector_db.max_hub_degree = int(d.get("max_hub_degree", cfg.vector_db.max_hub_degree))
                 cfg.vector_db.max_traversal_tokens = int(d.get("max_traversal_tokens", cfg.vector_db.max_traversal_tokens))
+
+            # 8. Compiler 設定
+            if "compiler" in data and isinstance(data["compiler"], dict):
+                d = data["compiler"]
+                cfg.compiler.auto_moc = bool(d.get("auto_moc", cfg.compiler.auto_moc))
+                cfg.compiler.extract_full_text = bool(d.get("extract_full_text", cfg.compiler.extract_full_text))
+                cfg.compiler.max_extract_chars = int(d.get("max_extract_chars", cfg.compiler.max_extract_chars))
+                cfg.compiler.default_status = str(d.get("default_status", cfg.compiler.default_status))
 
         except Exception as e:
             print(f"Warning: Failed to load config file {target_config}: {e}")

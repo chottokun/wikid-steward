@@ -98,6 +98,11 @@ def run(dir: Path):
     default=None,
     help="Parse profile name (paper, drawing, spreadsheet, presentation)",
 )
+@click.option(
+    "--moc/--no-moc",
+    default=True,
+    help="Automatically synchronize MOC (index.md) after compilation (default: True)",
+)
 def compile(
     path: Path,
     dir: Path,
@@ -109,6 +114,7 @@ def compile(
     hide_source_links: bool,
     extract_terms: bool,
     profile: str | None,
+    moc: bool,
 ):
     """Compile document(s) into OKF v0.2 structured knowledge notes and raw markdown"""
     from wikid_steward.core.document_compiler import DocumentToOKFCompiler
@@ -127,6 +133,7 @@ def compile(
             hide_source_links=hide_source_links,
             extract_terms=extract_terms,
             profile_name=profile,
+            auto_moc=moc,
         )
         click.echo(f"  - Raw markdown: {res.raw_markdown_path.relative_to(dir)}")
         click.echo(f"  - Main note:    {res.main_note_path.relative_to(dir)}")
@@ -146,6 +153,7 @@ def compile(
             hide_source_links=hide_source_links,
             extract_terms=extract_terms,
             profile_name=profile,
+            auto_moc=moc,
         )
         click.echo(f"✅ Successfully compiled {len(results)} document(s)")
 
