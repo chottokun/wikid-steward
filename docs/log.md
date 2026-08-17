@@ -1,5 +1,11 @@
 # Knowledge Update Log
 
+## 2026-08-17
+
+* **Creation**: 様々なドキュメントを OKF v0.2 思想に準拠した Markdown 群（生Markdown、メインノート、1トピック=1ファイルの概念・用語ノート群）にコンパイルする `DocumentToOKFCompiler` (`src/wikid_steward/core/document_compiler.py`) を実装。
+* **Update**: CLI `wikid-steward compile` コマンドを刷新し、ファイル・ディレクトリ指定、`--status` (draft/stable)、`--auto-stable`、`--reviewer`、原本バイナリ保存選択 (`--save-source/--no-save-source`)、原本リンク露出制御 (`--hide-source-links`)、用語抽出・分解 (`--extract-terms`) をサポート。
+* **Update**: `_raw/{slug}.md` への生Markdown出力時にも OKF v0.2 YAML フロントマター、画像アセット埋め込み、手書きメモ保護領域を完全適用するベストプラクティス化を実施。
+
 ## 2026-08-15
 
 * **Creation**: v7.0 拡張仕様として、バックリンク集約 ＆ 用語定義自動逆合成仕様 ([`docs/architecture/retro_compiler.md`](./architecture/retro_compiler.md)) を追加。

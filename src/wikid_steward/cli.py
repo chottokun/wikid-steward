@@ -39,8 +39,8 @@ def run(dir: Path):
 
 @main.command()
 @click.argument(
-    "file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    "path",
+    type=click.Path(exists=True, path_type=Path),
 )
 @click.option(
     "--dir",
@@ -49,13 +49,105 @@ def run(dir: Path):
     default=Path.cwd(),
     help="Target base directory",
 )
-def compile(file: Path, dir: Path):
-    """Compile a raw source or staging file into structured OKF notes"""
-    click.echo(f"⚙️ Compiling {file} into knowledge notes...")
-    from wikid_steward.watcher.handlers import StagingFileHandler
-    handler = StagingFileHandler(dir)
-    handler.process_staging_file(file)
-    click.echo(f"✅ Compilation finished for {file.name}")
+@click.option(
+    "--out",
+    "-o",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Output directory for compiled notes (default: wiki/)",
+)
+@click.option(
+    "--status",
+    "-s",
+    type=click.Choice(["draft", "stable", "deprecated"]),
+    default="draft",
+    help="Document status in OKF frontmatter (default: draft)",
+)
+@click.option(
+    "--auto-stable",
+    "--force-stable",
+    is_flag=True,
+    help="Force document status to 'stable'",
+)
+@click.option(
+    "--reviewer",
+    "-r",
+    type=str,
+    default=None,
+    help="Reviewer identifier for verified entry (e.g. human:username)",
+)
+@click.option(
+    "--save-source/--no-save-source",
+    default=True,
+    help="Copy original binary file to raw_sources/ (default: True)",
+)
+@click.option(
+    "--hide-source-links",
+    is_flag=True,
+    help="Hide direct links/paths to original source for privacy/confidentiality",
+)
+@click.option(
+    "--extract-terms/--no-extract-terms",
+    default=True,
+    help="Decompose document into individual concept/glossary notes (default: True)",
+)
+@click.option(
+    "--profile",
+    "-p",
+    type=str,
+    default=None,
+    help="Parse profile name (paper, drawing, spreadsheet, presentation)",
+)
+def compile(
+    path: Path,
+    dir: Path,
+    out: Path | None,
+    status: str,
+    auto_stable: bool,
+    reviewer: str | None,
+    save_source: bool,
+    hide_source_links: bool,
+    extract_terms: bool,
+    profile: str | None,
+):
+    """Compile document(s) into OKF v0.2 structured knowledge notes and raw markdown"""
+    from wikid_steward.core.document_compiler import DocumentToOKFCompiler
+
+    final_status = "stable" if auto_stable else status
+    compiler = DocumentToOKFCompiler(base_dir=dir)
+
+    if path.is_file():
+        click.echo(f"⚙️ Compiling file {path.name} (status: {final_status})...")
+        res = compiler.compile_file(
+            file_path=path,
+            output_dir=out,
+            status=final_status,
+            reviewer=reviewer,
+            save_source=save_source,
+            hide_source_links=hide_source_links,
+            extract_terms=extract_terms,
+            profile_name=profile,
+        )
+        click.echo(f"  - Raw markdown: {res.raw_markdown_path.relative_to(dir)}")
+        click.echo(f"  - Main note:    {res.main_note_path.relative_to(dir)}")
+        if res.concept_note_paths:
+            click.echo(f"  - Concepts:     {len(res.concept_note_paths)} notes generated")
+            for cp in res.concept_note_paths:
+                click.echo(f"      • {cp.relative_to(dir)}")
+        click.echo(f"✅ Compilation finished for {path.name}")
+    elif path.is_dir():
+        click.echo(f"⚙️ Compiling directory {path} (status: {final_status})...")
+        results = compiler.compile_directory(
+            dir_path=path,
+            output_dir=out,
+            status=final_status,
+            reviewer=reviewer,
+            save_source=save_source,
+            hide_source_links=hide_source_links,
+            extract_terms=extract_terms,
+            profile_name=profile,
+        )
+        click.echo(f"✅ Successfully compiled {len(results)} document(s)")
 
 
 @main.command("compile-stub")
