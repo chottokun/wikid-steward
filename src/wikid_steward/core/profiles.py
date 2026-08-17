@@ -80,6 +80,11 @@ PROFILES_MAP = {
 }
 
 
+def get_profile_by_name(profile_name: str) -> ParseProfile | None:
+    """指定された名前の ParseProfile を取得する。"""
+    return PROFILES_MAP.get(profile_name.lower())
+
+
 def resolve_profile(
     raw_file_path: Path | str, base_raw_dir: Path | str
 ) -> tuple[ParseProfile, str, dict[str, Any]]:
