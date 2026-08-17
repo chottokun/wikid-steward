@@ -67,7 +67,7 @@ vector_db:
 # 7. ドキュメントコンパイラ (OKF Compiler) 設定
 compiler:
   auto_moc: true                 # コンパイル完了時に MOC (index.md) を自動更新
-  extract_full_text: true        # 用語・概念抽出時に全文コンテキストを使用
-  max_extract_chars: 50000       # 用語抽出時の最大文字数上限 (0で無制限)
+  extract_full_text: false       # 用語・概念抽出時に全文を使用するか (長大モデル使用時は true)
+  max_extract_chars: 12000       # 用語抽出時の最大文字数上限 (ローカルLLM推奨: 10000〜15000)
   default_status: "draft"        # デフォルトステータス (draft | stable)
 

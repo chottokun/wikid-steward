@@ -92,8 +92,8 @@ class VectorDBSettings:
 @dataclass
 class CompilerSettings:
     auto_moc: bool = True  # コンパイル完了時に MOC (index.md) を自動更新
-    extract_full_text: bool = True  # 用語・概念抽出時に全文コンテキストを使用
-    max_extract_chars: int = 50000  # 用語抽出時の最大文字数上限 (0で無制限)
+    extract_full_text: bool = False  # 用語・概念抽出時に全文コンテキストを使用 (長大モデル使用時は true)
+    max_extract_chars: int = 12000  # 用語抽出時の最大文字数上限 (0で無制限)
     default_status: str = "draft"  # デフォルトステータス (draft | stable)
 
 

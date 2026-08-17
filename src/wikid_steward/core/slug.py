@@ -25,10 +25,19 @@ def generate_slug(relative_path_no_ext: str, byte_limit: int = 100) -> str:
     # 3. ASCII 文字を小文字化
     normalized = normalized.lower()
 
-    # 4. OS 禁止文字、スペース、記号を一律ハイフンに置換 (マルチバイト文字 \w は保持)
-    normalized = re.sub(
-        r'[\s\:\*\?\"\<\>\|\[\]\#\^\,\;\!\&\(\)\@\.\=\+]+', "-", normalized
-    )
+    # 4. 絵文字・特殊記号・OS禁止文字・スペースをハイフンに置換 (アンダースコア _ は保持)
+    # Unicode カテゴリ (So: 絵文字/記号, Sc: 通貨, Sk: 修飾記号, Sm: 数学記号, P: 句読点/括弧, Z: 空白) を安全に処理
+    sanitized_chars = []
+    for ch in normalized:
+        if ch == "_":
+            sanitized_chars.append("_")
+            continue
+        cat = unicodedata.category(ch)
+        if cat.startswith("P") or cat.startswith("Z") or cat.startswith("S") or cat.startswith("C"):
+            sanitized_chars.append("-")
+        else:
+            sanitized_chars.append(ch)
+    normalized = "".join(sanitized_chars)
 
     # 5. セパレータ文字（アンダースコア、ハイフン）の重複（連続）を整理
     normalized = re.sub(r"[-_]{2,}", "_", normalized)

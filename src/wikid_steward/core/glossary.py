@@ -52,24 +52,47 @@ class GlossaryExtractor:
                 system_prompt=system_prompt,
             )
 
-            # JSON 部分のパース
-            json_str = raw_response
+            # JSON 部分のパース (マークダウンコードブロック、配列の探索、オブジェクトの救出)
+            json_str = raw_response.strip()
             if "```json" in json_str:
-                json_str = json_str.split("```json")[1].split("```")[0]
+                json_str = json_str.split("```json")[1].split("```")[0].strip()
             elif "```" in json_str:
-                json_str = json_str.split("```")[1].split("```")[0]
+                json_str = json_str.split("```")[1].split("```")[0].strip()
 
-            json_str = json_str.strip()
-            items = json.loads(json_str)
+            # 配列 [...] または オブジェクト {...} の探索
+            match = re.search(r"\[\s*\{[\s\S]*\}\s*\]", json_str)
+            if match:
+                json_str = match.group(0)
+
+            items = []
+            try:
+                parsed = json.loads(json_str)
+                if isinstance(parsed, list):
+                    items = parsed
+                elif isinstance(parsed, dict):
+                    # {"terms": [...]} または単一の {"canonical_title": ...}
+                    if "terms" in parsed and isinstance(parsed["terms"], list):
+                        items = parsed["terms"]
+                    elif "concepts" in parsed and isinstance(parsed["concepts"], list):
+                        items = parsed["concepts"]
+                    elif "canonical_title" in parsed:
+                        items = [parsed]
+            except Exception:
+                # 行単位の簡易フォールバック
+                pass
 
             terms = []
             for item in items:
+                if not isinstance(item, dict):
+                    continue
                 title = item.get("canonical_title", "").strip()
                 if not title or len(title) <= 2:
                     continue
 
                 slug = generate_slug(title)
                 aliases = item.get("aliases", [title])
+                if isinstance(aliases, str):
+                    aliases = [aliases]
                 desc = item.get("description", "")
 
                 terms.append(
@@ -81,11 +104,47 @@ class GlossaryExtractor:
                     )
                 )
 
-            return terms
+            if terms:
+                return terms
 
         except Exception as e:
-            print(f"Glossary extraction warning: {e}")
-            return []
+            logger.warning(f"Glossary extraction warning: {e}")
+
+        # フェイルセーフ: LLM応答が空または失敗した場合のルールベース主要用語救出
+        fallback_terms = []
+        # 大見出しやタイトルの単語から主要専門用語を探索
+        heading_matches = re.findall(r"^#+\s+(.+)$", text, flags=re.MULTILINE)
+        for h in heading_matches[:3]:
+            h_clean = h.strip("#").strip()
+            if len(h_clean) > 3 and not h_clean.startswith("概要") and not h_clean.startswith("目次"):
+                slug = generate_slug(h_clean)
+                fallback_terms.append(
+                    GlossaryTerm(
+                        canonical_title=h_clean,
+                        slug=slug,
+                        aliases=[h_clean],
+                        description=f"Auto-extracted key concept from heading: {h_clean}",
+                    )
+                )
+
+        # 固有名詞・頭字語のパターンマッチ (例: LoRA, RAG, BERT, GPT 等)
+        acronyms = set(re.findall(r"\b[A-Z][A-Za-z0-9-]{2,15}\b", text[:3000]))
+        stop_words = {"The", "This", "That", "With", "From", "Using", "Paper", "Model", "Method", "Figure", "Table"}
+        for acr in sorted(acronyms - stop_words):
+            if len(fallback_terms) >= 5:
+                break
+            slug = generate_slug(acr)
+            if not any(t.slug == slug for t in fallback_terms):
+                fallback_terms.append(
+                    GlossaryTerm(
+                        canonical_title=acr,
+                        slug=slug,
+                        aliases=[acr],
+                        description=f"Auto-extracted domain concept: {acr}",
+                    )
+                )
+
+        return fallback_terms
 
     def create_glossary_note(
         self, term: GlossaryTerm, output_dir: Path
