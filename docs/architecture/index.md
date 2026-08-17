@@ -6,6 +6,7 @@ title: "Architecture Index"
 # Architecture Knowledge Index
 
 * [parser.md](./parser.md) - Docling パースパイプライン統合仕様
+* [azure_di_parser.md](./azure_di_parser.md) - Azure Document Intelligence 連携 ＆ 構造化 HTML テーブル自動変換 設計仕様
 * [metadata.md](./metadata.md) - 2層ハイブリッドメタデータ設計 (層A + 層B)
 * [handlers.md](./handlers.md) - カスタムプロファイルハンドラー作成・追加ガイド ＆ コードテンプレート
 * [moc.md](./moc.md) - 動的 MOC (Map of Content) 生成仕様
