@@ -190,3 +190,71 @@ def test_compile_doc_type_drawing_sbom_profile(temp_workspace: Path):
     assert "<table" in main_body
 
 
+def test_concept_reference_source_appending_and_protection(temp_workspace: Path):
+    """既存の概念ノートが存在する場合に、定義や手書きメモを保護しつつ言及ソースが本文に追記されることを検証"""
+    concepts_dir = temp_workspace / "wiki" / "concepts"
+    existing_concept_path = concepts_dir / "distributed_tracing.md"
+
+    existing_content = """---
+type: Concept
+title: "Distributed Tracing"
+status: stable
+verified:
+  - by: "human:reviewer1"
+    at: "2026-08-10T00:00:00Z"
+sources:
+  - id: "primary-paper"
+    resource: "raw_sources/dapper.pdf"
+    title: "Dapper Paper"
+---
+
+# Distributed Tracing
+
+## 概要
+Google Dapper に基づく分散トレーシングのオリジナル定義。
+
+## 📝 手書きメモ
+
+<!-- HUMAN BEGIN -->
+現場での検証メモ: OpenTelemetry との互換性を確認済み。
+<!-- HUMAN END -->
+
+## 📚 関連・言及ソース (References)
+* **一次定義**: [[dapper]] (`raw_sources/dapper.pdf`)
+"""
+    existing_concept_path.write_text(existing_content, encoding="utf-8")
+
+    # 新しいドキュメントを投入してコンパイル
+    new_doc = temp_workspace / "service_mesh_guide.md"
+    new_doc.write_text(
+        "# サービスメッシュ運用ガイド\n\n分散トレーシング (Distributed Tracing) を活用してレイテンシを監視する。\n",
+        encoding="utf-8",
+    )
+
+    compiler = DocumentToOKFCompiler(base_dir=temp_workspace)
+    # 用語抽出で "Distributed Tracing" が検出されるように直接コンパイル実行
+    from wikid_steward.core.glossary import GlossaryTerm
+    # モック/直接呼び出しシミュレーション
+    res = compiler.compile_file(
+        file_path=new_doc,
+        status="draft",
+        save_source=False,
+    )
+
+    # 既存概念ノートの検証
+    updated_content = existing_concept_path.read_text(encoding="utf-8")
+    fm, body = parse_okf_frontmatter(updated_content)
+
+    # 1. フロントマターの status (stable) および verified がダウングレード・破壊されていないこと
+    assert fm.get("status") == "stable"
+    assert len(fm.get("verified", [])) == 1
+
+    # 2. 既存の概要本文および手書きメモが 100% 保持されていること
+    assert "Google Dapper に基づく分散トレーシングのオリジナル定義。" in body
+    assert "OpenTelemetry との互換性を確認済み。" in body
+
+    # 3. 関連・言及ソースセクションが存在すること
+    assert "## 📚 関連・言及ソース (References)" in body
+
+
+

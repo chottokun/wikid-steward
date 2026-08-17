@@ -27,7 +27,45 @@ from wikid_steward.core.profiles import resolve_profile
 from wikid_steward.core.relinker import WikiRelinker
 from wikid_steward.core.slug import generate_slug
 
+from datetime import datetime, timezone
+
 logger = logging.getLogger(__name__)
+
+
+def append_reference_source(
+    content: str,
+    doc_title: str,
+    doc_slug: str,
+    source_path: str = "",
+    date_str: str = "",
+    is_primary: bool = False,
+) -> str:
+    """Markdown 内の '## 📚 関連・言及ソース (References)' セクションにエントリを安全に追記する。
+
+    セクションが存在しない場合は末尾に追加する。すでに同一 doc_slug の行が存在する場合は重複追記しない。
+    """
+    date_tag = f" - *{date_str} 抽出*" if date_str else ""
+    path_tag = f" (`{source_path}`)" if source_path else ""
+
+    if is_primary:
+        entry_line = f"* **一次定義**: [[{doc_slug}]] - {doc_title}{path_tag}"
+    else:
+        entry_line = f"* **言及追加**: [[{doc_slug}]] - {doc_title}{path_tag}{date_tag}"
+
+    # すでに [[doc_slug]] への言及が存在する場合は何もしない
+    if f"[[{doc_slug}]]" in content:
+        return content
+
+    section_header = "## 📚 関連・言及ソース (References)"
+    if section_header in content:
+        # セクション直後または末尾に追記
+        parts = content.split(section_header, 1)
+        header_and_before = parts[0] + section_header
+        after = parts[1]
+        return f"{header_and_before}\n{entry_line}{after}"
+    else:
+        # 末尾にセクションごと追記
+        return f"{content.rstrip()}\n\n{section_header}\n{entry_line}\n"
 
 
 @dataclass
@@ -225,53 +263,70 @@ class DocumentToOKFCompiler:
             # ルールベース/LLM抽出
             extracted_terms = extractor.extract_terms(raw_extracted_text)
 
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
             # 各概念について 1トピック=1ファイル の OKF ノートを生成
             for term in extracted_terms:
                 concept_slug = term.slug or generate_slug(term.canonical_title)
                 concept_note_path = concepts_dir / f"{concept_slug}.md"
 
-                # 既存ノートが存在する場合は手書きメモを保護
-                existing_content = (
-                    concept_note_path.read_text(encoding="utf-8")
-                    if concept_note_path.exists()
-                    else None
-                )
-
-                concept_sources = []
-                if source_resource_path or not hide_source_links:
-                    concept_sources.append(
-                        SourceEntry(
-                            id=slug,
-                            resource=source_resource_path,
-                            title=title,
+                if concept_note_path.exists():
+                    # 既存ノートが存在する場合: フロントマター・概要・手書きメモを完全保護し、言及ソースのみ追記
+                    existing_text = concept_note_path.read_text(encoding="utf-8")
+                    updated_text = append_reference_source(
+                        content=existing_text,
+                        doc_title=title,
+                        doc_slug=slug,
+                        source_path=source_resource_path,
+                        date_str=today_str,
+                        is_primary=False,
+                    )
+                    concept_note_path.write_text(updated_text, encoding="utf-8")
+                    concept_paths.append(concept_note_path)
+                else:
+                    # 新規起票: 今回のドキュメントを Primary Source として作成
+                    concept_sources = []
+                    if source_resource_path or not hide_source_links:
+                        concept_sources.append(
+                            SourceEntry(
+                                id=slug,
+                                resource=source_resource_path,
+                                title=title,
+                            )
                         )
+
+                    concept_doc = OKFDocumentData(
+                        doc_type="Concept",
+                        title=term.canonical_title,
+                        description=term.description,
+                        status=status,
+                        generated=ActorInfo(by="wikid-steward/compiler"),
+                        sources=concept_sources,
+                        tags=["concept", profile.name],
+                        custom_metadata={"aliases": term.aliases},
+                    )
+                    if reviewer:
+                        concept_doc.verified = [VerifiedEntry(by=reviewer)]
+
+                    c_fm = generate_okf_v7_frontmatter(concept_doc)
+                    c_body = (
+                        f"# {term.canonical_title}\n\n"
+                        f"## 概要\n{term.description}\n\n"
+                        f"## 別名・表記揺れ\n"
+                        + "\n".join([f"- {alias}" for alias in term.aliases])
+                        + f"\n\n{HUMAN_MEMO_TEMPLATE}"
+                    )
+                    c_body_with_ref = append_reference_source(
+                        content=c_body,
+                        doc_title=title,
+                        doc_slug=slug,
+                        source_path=source_resource_path,
+                        date_str=today_str,
+                        is_primary=True,
                     )
 
-                concept_doc = OKFDocumentData(
-                    doc_type="Concept",
-                    title=term.canonical_title,
-                    description=term.description,
-                    status=status,
-                    generated=ActorInfo(by="wikid-steward/compiler"),
-                    sources=concept_sources,
-                    tags=["concept", profile.name],
-                    custom_metadata={"aliases": term.aliases},
-                )
-                if reviewer:
-                    concept_doc.verified = [VerifiedEntry(by=reviewer)]
-
-                c_fm = generate_okf_v7_frontmatter(concept_doc)
-                c_body = (
-                    f"# {term.canonical_title}\n\n"
-                    f"## 概要\n{term.description}\n\n"
-                    f"## 別名・表記揺れ\n"
-                    + "\n".join([f"- {alias}" for alias in term.aliases])
-                    + f"\n\n{HUMAN_MEMO_TEMPLATE}"
-                )
-
-                final_c_content = merge_human_memo(f"{c_fm}\n{c_body}", existing_content)
-                concept_note_path.write_text(final_c_content, encoding="utf-8")
-                concept_paths.append(concept_note_path)
+                    concept_note_path.write_text(f"{c_fm}\n{c_body_with_ref}", encoding="utf-8")
+                    concept_paths.append(concept_note_path)
 
         # 6. メイン構造化Wikiノートの生成
         handler = get_profile_handler(profile.name)
