@@ -257,4 +257,34 @@ Google Dapper に基づく分散トレーシングのオリジナル定義。
     assert "## 📚 関連・言及ソース (References)" in body
 
 
+def test_compile_all_raw_sources_directory(temp_workspace: Path):
+    """raw_sources/ 配下に存在するすべての実 PDF ファイルを一括コンパイルし、すべて成功することを検証"""
+    project_root = Path.cwd()
+    raw_sources_dir = project_root / "raw_sources"
+    pdf_files = list(raw_sources_dir.glob("**/*.pdf"))
+
+    if not pdf_files:
+        pytest.skip("No PDF files found in raw_sources/")
+
+    compiler = DocumentToOKFCompiler(base_dir=temp_workspace)
+    results = compiler.compile_directory(
+        dir_path=raw_sources_dir,
+        status="stable",
+        reviewer="human:tester",
+        save_source=False,
+        extract_terms=True,
+    )
+
+    # 検出されたすべてのPDFが正常にコンパイルされたか検証
+    assert len(results) >= len(pdf_files)
+    for res in results:
+        assert res.raw_markdown_path.exists()
+        assert res.main_note_path.exists()
+        raw_fm, _ = parse_okf_frontmatter(res.raw_markdown_path)
+        assert raw_fm.get("type") == "Source"
+        main_fm, _ = parse_okf_frontmatter(res.main_note_path)
+        assert main_fm.get("status") == "stable"
+
+
+
 
