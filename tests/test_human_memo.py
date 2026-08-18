@@ -1,10 +1,8 @@
-import pytest
 from wikid_steward.core.human_memo import (
     extract_human_memo,
+    merge_human_memo,
     protect_human_memo,
     restore_human_memo,
-    merge_human_memo,
-    HUMAN_MEMO_TEMPLATE,
 )
 
 

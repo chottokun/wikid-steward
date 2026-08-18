@@ -1,10 +1,12 @@
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+
 import yaml
 from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
+
 from wikid_steward.core.config import get_config
 
 
@@ -50,7 +52,9 @@ class OpenAICompatibleEmbeddingClient:
                 for data in response.data:
                     all_embeddings.append(data.embedding)
             except Exception as e:
-                print(f"[Embedding Error] Failed to generate embedding via OpenAI-compatible API: {e}")
+                print(
+                    f"[Embedding Error] Failed to generate embedding via OpenAI-compatible API: {e}"
+                )
                 # セーフティフォールバック (0ベクトル)
                 dim = len(all_embeddings[0]) if all_embeddings else 384
                 for _ in batch:
@@ -144,9 +148,7 @@ class QdrantKnowledgeIndexer:
                 # 段落ブロックごとに Chunk 分割
                 paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
                 for i, para in enumerate(paragraphs):
-                    chunk_uuid = str(
-                        uuid.uuid5(uuid.NAMESPACE_DNS, f"{doc_id}_{i}_{para[:30]}")
-                    )
+                    chunk_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{doc_id}_{i}_{para[:30]}"))
                     chunks.append(
                         KnowledgeChunk(
                             chunk_id=chunk_uuid,
@@ -165,7 +167,9 @@ class QdrantKnowledgeIndexer:
             print("[Indexer] No chunks generated.")
             return 0
 
-        print(f"[Indexer] Generating embeddings for {len(chunks)} chunks via OpenAI-compatible API...")
+        print(
+            f"[Indexer] Generating embeddings for {len(chunks)} chunks via OpenAI-compatible API..."
+        )
         texts = [c.content for c in chunks]
         embeddings = self.embed_texts(texts)
 
@@ -192,7 +196,9 @@ class QdrantKnowledgeIndexer:
                 )
             )
 
-        print(f"[Indexer] Upserting {len(points)} points into Qdrant collection '{self.collection_name}'...")
+        print(
+            f"[Indexer] Upserting {len(points)} points into Qdrant collection '{self.collection_name}'..."
+        )
         self.client.upsert(collection_name=self.collection_name, points=points)
         print(f"[Indexer Done] Successfully indexed {len(points)} knowledge points.")
         return len(points)

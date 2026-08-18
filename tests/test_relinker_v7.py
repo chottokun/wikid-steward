@@ -1,12 +1,18 @@
-import pytest
 from wikid_steward.core.glossary import GlossaryTerm
-from wikid_steward.core.relinker import WikiRelinker, convert_wikilinks_to_gfm, convert_gfm_to_wikilinks
+from wikid_steward.core.relinker import (
+    WikiRelinker,
+    convert_gfm_to_wikilinks,
+    convert_wikilinks_to_gfm,
+)
 
 
 def test_relinker_multilingual_and_protected_segments():
     relinker = WikiRelinker()
     terms = [
-        GlossaryTerm(canonical_title="システムアーキテクチャ", aliases=["システムアーキテクチャ", "System Architecture"]),
+        GlossaryTerm(
+            canonical_title="システムアーキテクチャ",
+            aliases=["システムアーキテクチャ", "System Architecture"],
+        ),
         GlossaryTerm(canonical_title="PID制御", aliases=["PID制御", "PID Control"]),
     ]
 
@@ -58,7 +64,10 @@ x = PID制御()
     assert "現場メモ: システムアーキテクチャの変更点" in relinked
 
     # 第二セクションではセクション初回として再度 PID制御 が置換される
-    assert "新しいセクションでは再度 [[PID制御]] がリンクされますが、2回目 PID制御 はリンクされません。" in relinked
+    assert (
+        "新しいセクションでは再度 [[PID制御]] がリンクされますが、2回目 PID制御 はリンクされません。"
+        in relinked
+    )
 
 
 def test_convert_wikilinks_to_gfm_and_back():

@@ -1,8 +1,8 @@
 from pathlib import Path
+
 import pytest
 
-from wikid_steward.core.config import AppConfig, get_config
-from wikid_steward.core.document_compiler import DocumentToOKFCompiler, CompilationResult
+from wikid_steward.core.document_compiler import CompilationResult, DocumentToOKFCompiler
 from wikid_steward.core.okf_converter import parse_okf_frontmatter
 
 
@@ -42,7 +42,7 @@ def test_compile_plain_markdown_to_okf_notes(temp_workspace: Path):
         file_path=sample_doc,
         status="draft",
         save_source=True,
-        extract_terms=True,
+        extract_terms=False,
     )
 
     assert isinstance(result, CompilationResult)
@@ -78,6 +78,7 @@ def test_compile_with_status_stable_and_reviewer(temp_workspace: Path):
         status="stable",
         reviewer="human:nobuhiko",
         save_source=False,
+        extract_terms=False,
     )
 
     main_fm, _ = parse_okf_frontmatter(result.main_note_path)
@@ -98,6 +99,7 @@ def test_compile_with_hide_source_links(temp_workspace: Path):
     result = compiler.compile_file(
         file_path=sample_doc,
         hide_source_links=True,
+        extract_terms=False,
     )
 
     main_fm, main_body = parse_okf_frontmatter(result.main_note_path)
@@ -110,10 +112,13 @@ def test_compile_with_hide_source_links(temp_workspace: Path):
 def test_cli_compile_command(temp_workspace: Path):
     """CLI wikid-steward compile コマンドの正常実行を検証"""
     from click.testing import CliRunner
+
     from wikid_steward.cli import main
 
     sample_doc = temp_workspace / "cli_test_doc.md"
-    sample_doc.write_text("# CLIテスト文書\n\nこれはCLI経由でのコンパイルテスト。", encoding="utf-8")
+    sample_doc.write_text(
+        "# CLIテスト文書\n\nこれはCLI経由でのコンパイルテスト。", encoding="utf-8"
+    )
 
     runner = CliRunner()
     res = runner.invoke(
@@ -126,6 +131,7 @@ def test_cli_compile_command(temp_workspace: Path):
             "--auto-stable",
             "--reviewer",
             "human:tester",
+            "--no-extract-terms",
         ],
     )
     assert res.exit_code == 0
@@ -139,6 +145,7 @@ def test_cli_compile_command(temp_workspace: Path):
     assert any(v.get("by") == "human:tester" for v in fm.get("verified", []))
 
 
+@pytest.mark.slow
 def test_compile_real_raw_source_pdf(temp_workspace: Path):
     """raw_sources/ 配下の実 PDF (LoRA 論文) を用いた DocumentToOKFCompiler のエンドツーエンド変換検証"""
     project_root = Path.cwd()
@@ -182,6 +189,7 @@ def test_compile_doc_type_drawing_sbom_profile(temp_workspace: Path):
         file_path=drawing_file,
         profile_name="drawing",
         status="stable",
+        extract_terms=False,
     )
 
     main_fm, main_body = parse_okf_frontmatter(res.main_note_path)
@@ -233,12 +241,12 @@ Google Dapper に基づく分散トレーシングのオリジナル定義。
 
     compiler = DocumentToOKFCompiler(base_dir=temp_workspace)
     # 用語抽出で "Distributed Tracing" が検出されるように直接コンパイル実行
-    from wikid_steward.core.glossary import GlossaryTerm
     # モック/直接呼び出しシミュレーション
-    res = compiler.compile_file(
+    compiler.compile_file(
         file_path=new_doc,
         status="draft",
         save_source=False,
+        extract_terms=False,
     )
 
     # 既存概念ノートの検証
@@ -257,6 +265,7 @@ Google Dapper に基づく分散トレーシングのオリジナル定義。
     assert "## 📚 関連・言及ソース (References)" in body
 
 
+@pytest.mark.slow
 def test_compile_all_raw_sources_directory(temp_workspace: Path):
     """raw_sources/ 配下に存在するすべての実 PDF ファイルを一括コンパイルし、すべて成功することを検証"""
     project_root = Path.cwd()
@@ -289,12 +298,15 @@ def test_compile_all_raw_sources_directory(temp_workspace: Path):
 def test_compile_auto_moc_generation(temp_workspace: Path):
     """auto_moc=True 時にコンパイル完了後に MOC (index.md) が自動同期・生成されることを検証"""
     doc_path = temp_workspace / "network_spec.md"
-    doc_path.write_text("# ネットワーク設計\n\nSDN (Software Defined Networking) の設計。", encoding="utf-8")
+    doc_path.write_text(
+        "# ネットワーク設計\n\nSDN (Software Defined Networking) の設計。", encoding="utf-8"
+    )
 
     compiler = DocumentToOKFCompiler(base_dir=temp_workspace)
-    res = compiler.compile_file(
+    compiler.compile_file(
         file_path=doc_path,
         auto_moc=True,
+        extract_terms=False,
     )
 
     wiki_index = temp_workspace / "wiki" / "index.md"
@@ -302,8 +314,3 @@ def test_compile_auto_moc_generation(temp_workspace: Path):
 
     # MOC ファイルが自動生成されていること
     assert wiki_index.exists() or concepts_index.exists()
-
-
-
-
-

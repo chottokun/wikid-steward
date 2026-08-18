@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from wikid_steward.core.okf_converter import generate_okf_frontmatter
 
 
@@ -25,6 +26,7 @@ def generate_moc_for_directory(dir_path: Path, base_wiki_dir: Path) -> Path:
             parts = content.split("---", 2)
             if len(parts) >= 3:
                 import yaml
+
                 meta = yaml.safe_load(parts[1]) or {}
                 title = str(meta.get("title", title))
                 doc_type = str(meta.get("type", doc_type))
@@ -34,6 +36,7 @@ def generate_moc_for_directory(dir_path: Path, base_wiki_dir: Path) -> Path:
     doc_entries.sort(key=lambda x: x[0])
 
     from wikid_steward.core.config import get_config
+
     cfg = get_config()
     frontmatter = generate_okf_frontmatter(
         doc_id=f"moc_{dir_path.name}",

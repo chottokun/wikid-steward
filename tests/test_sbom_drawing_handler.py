@@ -1,6 +1,4 @@
-from pathlib import Path
-import pytest
-from wikid_steward.core.handlers import DrawingHandler, get_profile_handler
+from wikid_steward.core.handlers import DrawingHandler
 
 
 def test_drawing_handler_sbom_table_generation():

@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from wikid_steward.core.linter import KnowledgeLinter
 from wikid_steward.core.moc_generator import generate_all_mocs
 

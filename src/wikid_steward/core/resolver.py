@@ -1,14 +1,12 @@
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Any
 
 from wikid_steward.core.human_memo import (
-    merge_human_memo,
     protect_human_memo,
     restore_human_memo,
 )
 from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
-
 
 CONFLICT_PATTERN = re.compile(
     r"<<<<<<<[^\n]*\n([\s\S]*?)=======\n([\s\S]*?)>>>>>>>[^\n]*\n",
@@ -55,13 +53,10 @@ def resolve_git_conflict(
             "Git マーカーや余計な説明文は一切出力せず、マージ結果の Markdown のみを出力してください。"
         )
         user_prompt = (
-            f"【OURS (ローカル変更)】:\n{ours}\n\n"
-            f"【THEIRS (リモート/AI自動生成変更)】:\n{theirs}\n"
+            f"【OURS (ローカル変更)】:\n{ours}\n\n【THEIRS (リモート/AI自動生成変更)】:\n{theirs}\n"
         )
         try:
-            merged_block = client.generate(
-                prompt=user_prompt, system_prompt=system_prompt
-            )
+            merged_block = client.generate(prompt=user_prompt, system_prompt=system_prompt)
             return merged_block.strip() + "\n"
         except Exception:
             # LLM 失敗時は両方を結合して残す安全策

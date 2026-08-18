@@ -1,5 +1,6 @@
 from pathlib import Path
-import pytest
+
+from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
 from wikid_steward.vector.indexer import (
     OpenAICompatibleEmbeddingClient,
     QdrantKnowledgeIndexer,
@@ -8,13 +9,22 @@ from wikid_steward.vector.searcher import WikiGraphSearchEngine
 
 
 class MockEmbeddingClient(OpenAICompatibleEmbeddingClient):
-
     def __init__(self):
         self.base_url = "http://mock-embedding"
         self.model = "mock-model"
 
     def embed_texts(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         return [[0.1, 0.2, 0.3, 0.4] for _ in texts]
+
+
+class MockLLMClient(OpenAICompatibleLLMClient):
+    def __init__(self):
+        pass
+
+    def generate_chat_completion(
+        self, messages: list[dict], system_prompt: str | None = None
+    ) -> str:
+        return "ハブノードテスト用の統合回答。"
 
 
 def test_hub_node_degree_cutoff_and_token_budgeting(tmp_path: Path):
@@ -39,18 +49,23 @@ def test_hub_node_degree_cutoff_and_token_budgeting(tmp_path: Path):
 
     # 3. インデクサーと検索エンジンの初期化
     mock_embed = MockEmbeddingClient()
+    mock_llm = MockLLMClient()
     indexer = QdrantKnowledgeIndexer(location=":memory:", embedding_client=mock_embed)
     indexer.index_wiki_directory(wiki_dir)
 
-    search_engine = WikiGraphSearchEngine(indexer=indexer)
+    search_engine = WikiGraphSearchEngine(indexer=indexer, llm_client=mock_llm)
 
     # 4. 巨大ハブノードテストの実行
-    result = search_engine.search(query="Explain AI and Machine Learning", wiki_dir=wiki_dir, top_k=3)
+    result = search_engine.search(
+        query="Explain AI and Machine Learning", wiki_dir=wiki_dir, top_k=3
+    )
 
     # 検証 ①: 度数閾値 (max_hub_degree=25) により [[AI]] がハブノードとして簡易参照化されていること
     hub_terms = [g for g in result.traversed_glossary_terms if g.get("is_hub")]
     assert len(hub_terms) > 0, "FAILED: Hub node was not detected!"
-    assert any(g["term"].upper() == "AI" for g in hub_terms), "FAILED: AI was not detected as a hub term!"
+    assert any(g["term"].upper() == "AI" for g in hub_terms), (
+        "FAILED: AI was not detected as a hub term!"
+    )
     assert "巨大ハブノード" in hub_terms[0]["content"]
 
     # 検証 ②: トークンオーバーフロー防止 (全体テキスト長が 4000 トークン相当以内に収まっていること)

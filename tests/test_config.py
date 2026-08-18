@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from wikid_steward.core.config import load_app_config, get_config
+
+from wikid_steward.core.config import load_app_config
 
 
 def test_load_app_config_from_yaml(tmp_path: Path):
@@ -136,16 +137,35 @@ vector_db:
     finally:
         # Cleanup env vars
         keys = [
-            "LLM_PROVIDER", "LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL",
-            "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "VLM_ENABLED", "VLM_PROVIDER",
-            "VLM_MODEL", "VLM_ENDPOINT", "VLM_API_KEY", "VLM_PROMPT",
-            "RAW_DIR", "RAW_SOURCES_DIR", "STAGING_DIR", "WIKI_DIR",
-            "RELINKER_STOP_WORDS", "RELINKER_MIN_TERM_LENGTH", "VECTOR_DB_PROVIDER",
-            "QDRANT_URL", "QDRANT_API_KEY", "VECTOR_DB_COLLECTION_NAME",
-            "VECTOR_DB_MAX_CONTEXT_TOKENS", "VECTOR_DB_EMBEDDING_PROVIDER",
-            "VECTOR_DB_EMBEDDING_BASE_URL", "VECTOR_DB_EMBEDDING_MODEL",
-            "VECTOR_DB_EMBEDDING_API_KEY", "VECTOR_DB_MAX_HUB_DEGREE",
-            "VECTOR_DB_MAX_TRAVERSAL_TOKENS"
+            "LLM_PROVIDER",
+            "LLM_BASE_URL",
+            "LLM_API_KEY",
+            "LLM_MODEL",
+            "LLM_TEMPERATURE",
+            "LLM_MAX_TOKENS",
+            "VLM_ENABLED",
+            "VLM_PROVIDER",
+            "VLM_MODEL",
+            "VLM_ENDPOINT",
+            "VLM_API_KEY",
+            "VLM_PROMPT",
+            "RAW_DIR",
+            "RAW_SOURCES_DIR",
+            "STAGING_DIR",
+            "WIKI_DIR",
+            "RELINKER_STOP_WORDS",
+            "RELINKER_MIN_TERM_LENGTH",
+            "VECTOR_DB_PROVIDER",
+            "QDRANT_URL",
+            "QDRANT_API_KEY",
+            "VECTOR_DB_COLLECTION_NAME",
+            "VECTOR_DB_MAX_CONTEXT_TOKENS",
+            "VECTOR_DB_EMBEDDING_PROVIDER",
+            "VECTOR_DB_EMBEDDING_BASE_URL",
+            "VECTOR_DB_EMBEDDING_MODEL",
+            "VECTOR_DB_EMBEDDING_API_KEY",
+            "VECTOR_DB_MAX_HUB_DEGREE",
+            "VECTOR_DB_MAX_TRAVERSAL_TOKENS",
         ]
         for key in keys:
             if key in os.environ:

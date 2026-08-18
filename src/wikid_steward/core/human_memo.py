@@ -46,7 +46,11 @@ def protect_human_memo(content: str) -> tuple[str, str | None]:
 def restore_human_memo(content_with_placeholder: str, memo: str | None) -> str:
     """プレースホルダーを手書きメモ領域に復元する。"""
     memo_text = memo.strip() if memo else ""
-    replacement = f"{HUMAN_BEGIN_TAG}\n{memo_text}\n{HUMAN_END_TAG}" if memo_text else f"{HUMAN_BEGIN_TAG}\n{HUMAN_END_TAG}"
+    replacement = (
+        f"{HUMAN_BEGIN_TAG}\n{memo_text}\n{HUMAN_END_TAG}"
+        if memo_text
+        else f"{HUMAN_BEGIN_TAG}\n{HUMAN_END_TAG}"
+    )
     return content_with_placeholder.replace(HUMAN_MEMO_PLACEHOLDER, replacement)
 
 

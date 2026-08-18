@@ -1,4 +1,3 @@
-import pytest
 from wikid_steward.core.okf_converter import (
     generate_okf_frontmatter,
     replace_image_links,
@@ -21,8 +20,6 @@ def test_generate_okf_frontmatter():
     assert "source: raw_sources/project-a/DWG-1.pdf" in frontmatter
     assert "profile_used: drawing" in frontmatter
     assert "profile_source: directory_policy" in frontmatter
-
-
 
 
 def test_replace_image_links():

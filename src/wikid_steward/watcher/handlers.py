@@ -1,10 +1,7 @@
 import logging
 from pathlib import Path
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from wikid_steward.core.config import get_config
 from wikid_steward.core.document_compiler import DocumentToOKFCompiler
-from wikid_steward.core.promoter import check_reviewed_status, promote_document
 
 logger = logging.getLogger(__name__)
 

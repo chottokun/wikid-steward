@@ -1,8 +1,6 @@
-import os
 from dataclasses import dataclass
-from typing import Any
-from openai import OpenAI
 
+from openai import OpenAI
 
 from wikid_steward.core.config import get_config
 

@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field, asdict
+import re
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-import re
 from typing import Any
+
 import yaml
 
 
@@ -66,8 +67,7 @@ def generate_okf_v7_frontmatter(doc: OKFDocumentData) -> str:
 
     if doc.sources:
         data["sources"] = [
-            {"id": s.id, "resource": s.resource, "title": s.title}
-            for s in doc.sources
+            {"id": s.id, "resource": s.resource, "title": s.title} for s in doc.sources
         ]
 
     if doc.tags:
@@ -170,8 +170,9 @@ def replace_image_links(
 
     本文中に埋め込みが無い場合は抽出された画像アセットリンクを本文に埋め込む。
     """
+
     def _replace_match(match: re.Match) -> str:
-        alt_text = match.group(1) or "Image"
+        match.group(1) or "Image"
         img_path = match.group(2) or ""
         img_name = img_path.split("/")[-1].split("\\")[-1]
         return f"![{img_name}](assets/{slug}/{img_name})"

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+
 import click
 
 from wikid_steward.core.config import get_config
@@ -188,7 +189,9 @@ def compile_stub_cmd(term: str, dir: Path, force: bool):
     if promoted:
         click.echo(f"🎉 Successfully synthesized and promoted to {promoted.relative_to(dir)}")
     else:
-        click.echo(f"⚠️ Stub for [[{term}]] could not be compiled (insufficient backlinks or stub not found). Use --force to override.")
+        click.echo(
+            f"⚠️ Stub for [[{term}]] could not be compiled (insufficient backlinks or stub not found). Use --force to override."
+        )
 
 
 @main.command()
@@ -261,7 +264,9 @@ def search(query: str, dir: Path, top_k: int):
     click.echo("\n" + "=" * 60)
     click.echo(" 📌 【メイン該当ノート (Direct Hits)】")
     for i, hit in enumerate(result.main_hits, 1):
-        click.echo(f" [{i}] {hit.get('title')} ({hit.get('file_path')}) - Score: {hit.get('score'):.1f}")
+        click.echo(
+            f" [{i}] {hit.get('title')} ({hit.get('file_path')}) - Score: {hit.get('score'):.1f}"
+        )
 
     if result.traversed_glossary_terms:
         click.echo("\n 🔗 【巡回抽出された WikiLink 用語 (1-Hop Traversal)】")

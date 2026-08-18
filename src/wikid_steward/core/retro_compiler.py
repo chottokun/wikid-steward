@@ -1,9 +1,8 @@
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-import re
 from typing import Any
-import yaml
 
 from wikid_steward.core.human_memo import merge_human_memo
 from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
@@ -187,8 +186,7 @@ class RetroCompiler:
         contexts_text = []
         for i, b in enumerate(backlinks, 1):
             contexts_text.append(
-                f"【引用元 {i}】ノート名: 《{b.source_title}》\n"
-                f"文脈:\n{b.context_snippet}\n"
+                f"【引用元 {i}】ノート名: 《{b.source_title}》\n文脈:\n{b.context_snippet}\n"
             )
         all_context = "\n".join(contexts_text)
 
@@ -239,9 +237,7 @@ class RetroCompiler:
 
         return target_file
 
-    def compile_all_ready_stubs(
-        self, target_dir_name: str = "concepts"
-    ) -> list[Path]:
+    def compile_all_ready_stubs(self, target_dir_name: str = "concepts") -> list[Path]:
         """バックリンク数が N 件以上に達しているすべてのスタブを逆合成して昇格させる"""
         if not self.stubs_dir.exists():
             return []

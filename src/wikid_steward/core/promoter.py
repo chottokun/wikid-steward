@@ -1,6 +1,7 @@
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-import shutil
+
 import yaml
 
 
@@ -25,10 +26,7 @@ def check_reviewed_status(file_path: Path | str) -> bool:
                 yaml_data = yaml.safe_load(parts[1])
                 if isinstance(yaml_data, dict):
                     status = yaml_data.get("status", "")
-                    if (
-                        isinstance(status, str)
-                        and status.strip().lower() == "reviewed"
-                    ):
+                    if isinstance(status, str) and status.strip().lower() == "reviewed":
                         return True
     except Exception:
         pass
@@ -41,6 +39,7 @@ def promote_document(
     base_dir: Path | str,
     raw_relative_path: Path | str | None = None,
     commit_git: bool = True,
+    extract_terms: bool = True,
 ) -> None:
     """staging/ から wiki/ への昇格、同名ファイルの .bak 非破壊退避、および原本の raw_sources/ への移動を実行する。
 
@@ -51,6 +50,7 @@ def promote_document(
         commit_git: GitPython でセマンティックコミットを実行するかどうか
     """
     from wikid_steward.core.config import get_config
+
     cfg = get_config()
 
     note_path = Path(staging_note)
@@ -101,37 +101,32 @@ def promote_document(
 
     # 2. 競合退避 (.bak) - アセットフォルダ
     if target_assets.exists():
-        backup_assets = (
-            target_assets.parent / f"{target_assets.name}.{timestamp}.bak"
-        )
+        backup_assets = target_assets.parent / f"{target_assets.name}.{timestamp}.bak"
         shutil.move(target_assets, backup_assets)
 
     # 3. 物理移動: staging/ -> wiki/ (Markdown)
     shutil.move(note_path, target_note)
 
-    # 用語自動抽出 & WikiLink バインドフック
-    try:
-        from wikid_steward.core.glossary import GlossaryExtractor
-        from wikid_steward.core.relinker import WikiRelinker
+    # 用語自動抽出 & WikiLink バインドフック (extract_terms=True の場合)
+    if extract_terms:
+        try:
+            from wikid_steward.core.glossary import GlossaryExtractor
+            from wikid_steward.core.relinker import WikiRelinker
 
-        content = target_note.read_text(encoding="utf-8")
-        extractor = GlossaryExtractor()
-        max_chars = (
-            None
-            if cfg.compiler.extract_full_text
-            else cfg.compiler.max_extract_chars
-        )
-        terms = extractor.extract_terms(content, max_chars=max_chars)
+            content = target_note.read_text(encoding="utf-8")
+            extractor = GlossaryExtractor()
+            max_chars = None if cfg.compiler.extract_full_text else cfg.compiler.max_extract_chars
+            terms = extractor.extract_terms(content, max_chars=max_chars)
 
-        glossary_dir = wiki_base / "glossary"
-        for term in terms:
-            extractor.create_glossary_note(term, glossary_dir)
+            glossary_dir = wiki_base / "glossary"
+            for term in terms:
+                extractor.create_glossary_note(term, glossary_dir)
 
-        relinker = WikiRelinker()
-        relinked_content, _ = relinker.relink_text(content, terms)
-        target_note.write_text(relinked_content, encoding="utf-8")
-    except Exception as e:
-        print(f"Glossary / Relinker promotion hook warning: {e}")
+            relinker = WikiRelinker()
+            relinked_content, _ = relinker.relink_text(content, terms)
+            target_note.write_text(relinked_content, encoding="utf-8")
+        except Exception as e:
+            print(f"Glossary / Relinker promotion hook warning: {e}")
 
     # 4. 物理移動: staging/ -> wiki/ (Assets)
     if staging_assets.exists():
@@ -144,10 +139,7 @@ def promote_document(
         if raw_source.exists():
             target_raw_source.parent.mkdir(parents=True, exist_ok=True)
             if target_raw_source.exists():
-                backup_raw = (
-                    target_raw_source.parent
-                    / f"{target_raw_source.name}.{timestamp}.bak"
-                )
+                backup_raw = target_raw_source.parent / f"{target_raw_source.name}.{timestamp}.bak"
                 shutil.move(target_raw_source, backup_raw)
             shutil.move(raw_source, target_raw_source)
 

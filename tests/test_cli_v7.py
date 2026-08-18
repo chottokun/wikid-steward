@@ -1,7 +1,7 @@
-import pytest
-from click.testing import CliRunner
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+
+from click.testing import CliRunner
+
 from wikid_steward.cli import main
 
 

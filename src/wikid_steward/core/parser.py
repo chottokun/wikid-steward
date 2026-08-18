@@ -32,24 +32,16 @@ class KnowledgeParser:
         self.device = device
         pdf_options = PdfPipelineOptions()
 
-        acc_device = (
-            AcceleratorDevice.CUDA
-            if device.lower() == "cuda"
-            else AcceleratorDevice.CPU
-        )
+        acc_device = AcceleratorDevice.CUDA if device.lower() == "cuda" else AcceleratorDevice.CPU
         pdf_options.accelerator_options = AcceleratorOptions(device=acc_device)
         pdf_options.do_ocr = False
         pdf_options.do_table_structure = True
-        pdf_options.table_structure_options = TableStructureOptions(
-            mode="accurate"
-        )
+        pdf_options.table_structure_options = TableStructureOptions(mode="accurate")
         pdf_options.images_scale = 2.0
         pdf_options.generate_picture_images = True
 
         self.converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)
-            }
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
         )
 
     def parse(self, file_path: Path | str, profile=None):
@@ -59,28 +51,18 @@ class KnowledgeParser:
         if profile is not None:
             pdf_options = PdfPipelineOptions()
             acc_device = (
-                AcceleratorDevice.CUDA
-                if self.device.lower() == "cuda"
-                else AcceleratorDevice.CPU
+                AcceleratorDevice.CUDA if self.device.lower() == "cuda" else AcceleratorDevice.CPU
             )
-            pdf_options.accelerator_options = AcceleratorOptions(
-                device=acc_device
-            )
+            pdf_options.accelerator_options = AcceleratorOptions(device=acc_device)
 
             pdf_options.do_ocr = profile.do_ocr
             pdf_options.images_scale = profile.images_scale
             pdf_options.do_table_structure = True
-            pdf_options.table_structure_options = TableStructureOptions(
-                mode=profile.table_mode
-            )
+            pdf_options.table_structure_options = TableStructureOptions(mode=profile.table_mode)
             pdf_options.generate_picture_images = True
 
             converter = DocumentConverter(
-                format_options={
-                    InputFormat.PDF: PdfFormatOption(
-                        pipeline_options=pdf_options
-                    )
-                }
+                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
             )
             return converter.convert(path)
 
@@ -100,6 +82,7 @@ class KnowledgeParser:
         path = Path(file_path)
 
         from wikid_steward.core.config import get_config
+
         app_cfg = get_config()
 
         vlm_enabled = app_cfg.vlm.enabled
@@ -129,9 +112,7 @@ class KnowledgeParser:
         )
 
         pdf_converter = PDFConverter(options=options)
-        enhanced_converter = EnhancedDoclingConverter(
-            docling_converter=pdf_converter
-        )
+        enhanced_converter = EnhancedDoclingConverter(docling_converter=pdf_converter)
 
         return enhanced_converter.convert_to_markdown(
             input_path=path, slug=slug, assets_dir=assets_dir

@@ -1,10 +1,6 @@
 from pathlib import Path
-import pytest
+
 from wikid_steward.core.profiles import (
-    DRAWING_PROFILE,
-    PAPER_PROFILE,
-    PRESENTATION_PROFILE,
-    SPREADSHEET_PROFILE,
     resolve_profile,
 )
 

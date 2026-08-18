@@ -1,11 +1,13 @@
-import pytest
 from pathlib import Path
-from wikid_steward.core.config import get_config
+
+import pytest
+
 from wikid_steward.core.okf_converter import parse_okf_frontmatter
 from wikid_steward.core.promoter import promote_document
 from wikid_steward.watcher.daemon import RawFolderHandler
 
 
+@pytest.mark.slow
 def test_arxiv_real_pdf_ingest_pipeline(tmp_path: Path):
     """実際の ArXiv PDF (LoRA / RAG) を _raw に投入し、
 

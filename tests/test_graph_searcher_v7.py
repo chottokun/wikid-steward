@@ -1,6 +1,6 @@
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
+
 from wikid_steward.core.graph_searcher import LightweightGraphSearchEngine
 
 
@@ -52,8 +52,13 @@ status: stable
     result = engine.search(query="PID制御 フィードバック", wiki_dir=wiki_dir, top_k=2)
 
     assert len(result.main_hits) >= 1
-    assert result.main_hits[0]["title"] == "PID制御" or result.main_hits[0]["title"] == "フィードバック制御"
+    assert (
+        result.main_hits[0]["title"] == "PID制御"
+        or result.main_hits[0]["title"] == "フィードバック制御"
+    )
     # 1-Hop でフィードバック制御が巡回抽出されているか
     traversed_terms = [t["term"] for t in result.traversed_glossary_terms]
-    assert "フィードバック制御" in traversed_terms or any("フィードバック制御" in h["title"] for h in result.main_hits)
+    assert "フィードバック制御" in traversed_terms or any(
+        "フィードバック制御" in h["title"] for h in result.main_hits
+    )
     assert result.integrated_answer == "PID制御とフィードバック制御に関する統合回答です。"

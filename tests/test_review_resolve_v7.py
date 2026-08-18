@@ -1,9 +1,9 @@
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
-from wikid_steward.core.reviewer import review_file
-from wikid_steward.core.resolver import resolve_git_conflict
+
 from wikid_steward.core.okf_converter import parse_okf_frontmatter
+from wikid_steward.core.resolver import resolve_git_conflict
+from wikid_steward.core.reviewer import review_file
 
 
 def test_review_file_and_promote(tmp_path: Path):

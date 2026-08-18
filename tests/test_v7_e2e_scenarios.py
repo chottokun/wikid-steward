@@ -1,15 +1,12 @@
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock
 
 from wikid_steward.core.human_memo import merge_human_memo
 from wikid_steward.core.linter import KnowledgeLinter
 from wikid_steward.core.relinker import (
-    WikiRelinker,
     convert_gfm_to_wikilinks,
     convert_wikilinks_to_gfm,
 )
-from wikid_steward.core.retro_compiler import RetroCompiler, is_trusted_context_source
+from wikid_steward.core.retro_compiler import is_trusted_context_source
 
 
 def test_tc1_typo_suggest_warning_only_without_correction(tmp_path: Path):

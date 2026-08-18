@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
-import yaml
 
 from wikid_steward.core.okf_converter import (
     ActorInfo,
@@ -38,9 +36,7 @@ def review_file(
     if isinstance(verified_list, list):
         for v in verified_list:
             if isinstance(v, dict) and "by" in v:
-                new_verified.append(
-                    VerifiedEntry(by=v["by"], at=v.get("at", now_iso))
-                )
+                new_verified.append(VerifiedEntry(by=v["by"], at=v.get("at", now_iso)))
 
     new_verified.append(VerifiedEntry(by=reviewer, at=now_iso))
 

@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
 from wikid_steward.core.config import get_config
 from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
 from wikid_steward.vector.indexer import QdrantKnowledgeIndexer
@@ -42,7 +43,12 @@ class WikiGraphSearchEngine:
         # クエリのベクトル化と Qdrant 検索
         query_vectors = self.indexer.embed_texts([query])
         if not query_vectors:
-            return SearchResult(query=query, main_hits=[], traversed_glossary_terms=[], integrated_answer="埋め込み生成に失敗しました。")
+            return SearchResult(
+                query=query,
+                main_hits=[],
+                traversed_glossary_terms=[],
+                integrated_answer="埋め込み生成に失敗しました。",
+            )
         query_vector = query_vectors[0]
 
         try:
@@ -74,7 +80,15 @@ class WikiGraphSearchEngine:
         # クエリ単体からの用語一致も補完
         for term_candidate in query.split():
             clean_candidate = re.sub(r"[^\w\-]", "", term_candidate)
-            if len(clean_candidate) >= 2 and clean_candidate.upper() not in {"WHAT", "WITH", "THAT", "THIS", "FROM", "HAVE", "AND"}:
+            if len(clean_candidate) >= 2 and clean_candidate.upper() not in {
+                "WHAT",
+                "WITH",
+                "THAT",
+                "THIS",
+                "FROM",
+                "HAVE",
+                "AND",
+            }:
                 wikilinks_found.add(clean_candidate)
 
         # 1-Hop グラフ巡回: 用語説明ノート (wiki/glossary/) を自動追跡
@@ -90,7 +104,9 @@ class WikiGraphSearchEngine:
 
         for term in list(wikilinks_found)[:10]:
             # 度数 (Degree) の計算: 全 Vault 内での言及回数
-            degree = sum(len(re.findall(re.escape(term), txt, re.IGNORECASE)) for txt in all_md_texts)
+            degree = sum(
+                len(re.findall(re.escape(term), txt, re.IGNORECASE)) for txt in all_md_texts
+            )
 
             # ① 度数閾値フィルター (Degree Cutoff)
             if degree >= max_hub_degree:
@@ -137,7 +153,9 @@ class WikiGraphSearchEngine:
             )
 
         if glossary_hits:
-            context_blocks.append(f"=== 巡回抽出された WikiLink 用語定義 (1-Hop, トークン消費: {accumulated_tokens}/{max_traversal_tokens}) ===")
+            context_blocks.append(
+                f"=== 巡回抽出された WikiLink 用語定義 (1-Hop, トークン消費: {accumulated_tokens}/{max_traversal_tokens}) ==="
+            )
             for g in glossary_hits:
                 context_blocks.append(f"・[[{g['term']}]]:\n{g['content']}\n")
 

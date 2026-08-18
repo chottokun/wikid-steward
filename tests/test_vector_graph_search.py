@@ -1,5 +1,5 @@
 from pathlib import Path
-import pytest
+
 from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
 from wikid_steward.vector.indexer import (
     OpenAICompatibleEmbeddingClient,

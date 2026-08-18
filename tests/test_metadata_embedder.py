@@ -1,7 +1,7 @@
-import json
 from pathlib import Path
+
 from PIL import Image
-import pytest
+
 from wikid_steward.core.metadata_embedder import (
     embed_png_metadata,
     prepare_clean_assets_dir,

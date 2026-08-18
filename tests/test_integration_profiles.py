@@ -1,8 +1,6 @@
 from pathlib import Path
-import pytest
-from wikid_steward.core.metadata_embedder import prepare_clean_assets_dir
+
 from wikid_steward.core.okf_converter import generate_okf_frontmatter
-from wikid_steward.core.parser import KnowledgeParser
 from wikid_steward.core.profiles import resolve_profile
 from wikid_steward.core.slug import generate_slug
 
