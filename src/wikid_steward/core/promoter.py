@@ -116,7 +116,12 @@ def promote_document(
 
         content = target_note.read_text(encoding="utf-8")
         extractor = GlossaryExtractor()
-        terms = extractor.extract_terms(content)
+        max_chars = (
+            None
+            if cfg.compiler.extract_full_text
+            else cfg.compiler.max_extract_chars
+        )
+        terms = extractor.extract_terms(content, max_chars=max_chars)
 
         glossary_dir = wiki_base / "glossary"
         for term in terms:

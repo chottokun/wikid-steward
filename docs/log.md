@@ -1,5 +1,13 @@
 # Knowledge Update Log
 
+## 2026-08-17
+
+* **Creation**: Azure Document Intelligence 連携 ＆ 構造化 HTML テーブル自動変換 設計仕様 ([`docs/architecture/azure_di_parser.md`](./architecture/azure_di_parser.md)) を追加。
+* **Creation**: 様々なドキュメントを OKF v0.2 思想に準拠した Markdown 群（生Markdown、メインノート、1トピック=1ファイルの概念・用語ノート群）にコンパイルする `DocumentToOKFCompiler` (`src/wikid_steward/core/document_compiler.py`) を実装。
+* **Update**: 既存概念ノートの本文・定義・手書きメモ・フロントマターを完全保護しつつ、新しいドキュメントからの言及情報を本文末尾（`## 📚 関連・言及ソース (References)`）に安全に自動追記するレビュー支援機能を追加。
+* **Update**: CLI `wikid-steward compile` コマンドを刷新し、ファイル・ディレクトリ指定、`--status` (draft/stable)、`--auto-stable`、`--reviewer`、原本バイナリ保存選択 (`--save-source/--no-save-source`)、原本リンク露出制御 (`--hide-source-links`)、用語抽出・分解 (`--extract-terms`) をサポート。
+* **Update**: `_raw/{slug}.md` への生Markdown出力時にも OKF v0.2 YAML フロントマター、画像アセット埋め込み、手書きメモ保護領域を完全適用するベストプラクティス化を実施。
+
 ## 2026-08-15
 
 * **Creation**: v7.0 拡張仕様として、バックリンク集約 ＆ 用語定義自動逆合成仕様 ([`docs/architecture/retro_compiler.md`](./architecture/retro_compiler.md)) を追加。

@@ -45,13 +45,29 @@ uv sync
 
 ## 🚀 CLI コマンドガイド (Usage)
 
-### 1. リアルタイム監視デーモンの起動 (`run`)
+### 1. ドキュメントの OKF v0.2 Markdown 群へのコンパイル (`compile`)
+```bash
+# 単一ファイル（PDF, DOCX, PPTX, XLSX, Markdown等）を OKF v0.2 Markdown群にコンパイル
+uv run wikid-steward compile path/to/document.pdf
+
+# 即座に stable ステータスとして生成し、査読者ログを付与
+uv run wikid-steward compile path/to/document.pdf --auto-stable --reviewer "human:nobuhiko"
+
+# 原本リンクを非表示にし、原本バイナリを sources/ にコピー保存しない（社外秘対応）
+uv run wikid-steward compile secret.pdf --hide-source-links --no-save-source
+
+# ディレクトリ内の一括コンパイル
+uv run wikid-steward compile ./documents_dir/
+```
+`_raw/{slug}.md` への生Markdown配置、`wiki/concepts/` への用語・概念ノート群の自動分解、画像アセットの名前空間隔離、WikiLink相互接続を実行します。
+
+### 2. リアルタイム監視デーモンの起動 (`run`)
 ```bash
 uv run wikid-steward run
 ```
 `_raw/`（原本投入）および `staging/`（承認待機）をリアルタイムに監視・自動処理します。
 
-### 2. 未定義用語スタブの自動逆合成 (`compile-stub`)
+### 3. 未定義用語スタブの自動逆合成 (`compile-stub`)
 ```bash
 uv run wikid-steward compile-stub "PID制御"
 # 強制逆合成 (閾値未満でも実行)
@@ -59,25 +75,25 @@ uv run wikid-steward compile-stub "PID制御" --force
 ```
 蓄積されたバックリンク文脈から用語定義レジュメを自動合成し、`wiki/stubs/` から `wiki/concepts/` へ昇格移動します。
 
-### 3. 人間査読ログの記録と昇格 (`review`)
+### 4. 人間査読ログの記録と昇格 (`review`)
 ```bash
 uv run wikid-steward review wiki/stubs/system-architecture.md --reviewer "human:nobuhiko"
 ```
 フロントマターに査読者ログ (`verified`) を追記し、`status: stable` へ昇格させます。
 
-### 4. Git コンフリクトの自動解決 (`resolve`)
+### 5. Git コンフリクトの自動解決 (`resolve`)
 ```bash
 uv run wikid-steward resolve wiki/concepts/sample.md
 ```
 ファイル内の Git 衝突マーカー（`<<<<<<<` 等）を検知し、手書きメモを保護しながら文脈を自動マージします。
 
-### 5. 軽量 Wiki ナレッジグラフ検索 (`search`)
+### 6. 軽量 Wiki ナレッジグラフ検索 (`search`)
 ```bash
 uv run wikid-steward search "PID制御とフィードバック"
 ```
 OKF メタデータと 1-Hop `[[WikiLink]]` 巡回により、関連用語と統合回答を高速出力します。
 
-### 6. ナレッジ健全性監査 ＆ セルフヒーリング (`lint`)
+### 7. ナレッジ健全性監査 ＆ セルフヒーリング (`lint`)
 ```bash
 # 監査およびスタブ自動起票
 uv run wikid-steward lint
@@ -87,7 +103,7 @@ uv run wikid-steward lint --dry-run
 ```
 リンク切れ、Frontmatter 欠損、脚注と sources の不整合スキャン、タイポサジェスト（安全警告のみ）を実行します。
 
-### 7. 動的 MOC (Map of Content) の自動編成 (`moc`)
+### 8. 動的 MOC (Map of Content) の自動編成 (`moc`)
 ```bash
 uv run wikid-steward moc
 ```
