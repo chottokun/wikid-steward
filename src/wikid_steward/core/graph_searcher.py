@@ -1,32 +1,14 @@
 import re
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from wikid_steward.core.config import get_config
 from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
 from wikid_steward.core.okf_converter import parse_okf_frontmatter
 from wikid_steward.core.slug import generate_slug
+from wikid_steward.vector.searcher import SearcherProtocol, SearchHit, SearchResult
 
 
-@dataclass
-class SearchHit:
-    file_path: str
-    title: str
-    score: float
-    frontmatter: dict[str, Any]
-    snippet: str
-
-
-@dataclass
-class SearchResult:
-    query: str
-    main_hits: list[dict[str, Any]]
-    traversed_glossary_terms: list[dict[str, Any]]
-    integrated_answer: str
-
-
-class LightweightGraphSearchEngine:
+class LightweightGraphSearchEngine(SearcherProtocol):
     """外部ベクトルDB（Qdrant）に依存せず、OKF v0.2 構造化メタデータと
 
     1-Hop WikiLink グラフ巡回を純粋な Python で高速実行する軽量検索エンジン (v7.0)。

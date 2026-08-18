@@ -19,15 +19,17 @@ tags:
 
 # ハイブリッド検索 ＆ 1-Hop WikiLink グラフ巡回インフラ仕様
 
-`wikid-steward` は、外部依存を持たない超軽量なファイルベース検索（v7.0 標準）と、大規模コーパス向けの Qdrant ベクトル検索の両方を柔軟にサポートしています。
+`wikid-steward` は、外部依存を持たない超軽量なファイルベース検索（`LightweightGraphSearchEngine`）と、Qdrant ベクトル検索（`WikiGraphSearchEngine`）の両方を `SearcherProtocol` で統一・抽象化し、透過的な自動フォールバック運用（`FallbackSearchEngine`）をサポートしています。
 
-## 1. 超軽量ファイルベース 1-Hop グラフ検索 (`core/graph_searcher.py`) [v7.0 標準]
-- **外部 DB 不要**: Qdrant 等のサーバー構築なしで、純粋な Python スクリプトのみで実行可能。
-- **OKF 構造化メタデータスコアリング**: `title`, `tags`, `description`, `aliases` の前方一致・スコアリングでメイン該当ノートを選定。
-- **1-Hop 接続グラフ巡回**: メイン該当ノートの `[[WikiLink]]` やバックリンク（前提定義）を自動探索し、LLM が統合レポート回答を生成。
+## 1. Searcher Protocol ＆ 自動フォールバック (`vector/searcher.py`)
+- **Searcher Protocol**: `search(query, wiki_dir, top_k, max_traversal_depth)` 抽象インターフェースを定義。
+- **filelock によるプロセス間排他制御**: Qdrant ローカルモード (`path`) 利用時の RocksDB ファイルロック競合を防止。
+- **自動フォールバック**: Qdrant 接続・アクセス障害発生時、即座にファイルベース軽量検索にフォールバック。
 
-## 2. Qdrant ベクトル検索 ＆ 1-Hop グラフ巡回 (`vector/searcher.py`)
-- **ベクトル検索**: OpenAI 互換 Embedding でテキストブロックを多次元ベクトル化し、Qdrant から類似度の高い Top-K チャンクを抽出。
-- **巨大ハブノード度数制御 (Degree Cutoff)**: ナレッジ全体での言及回数（Degree）が `max_hub_degree` を超える用語は簡易参照に縮約。
-- **トークンバジェット制御 (Token Budget Control)**: 累積トークン数が `max_traversal_tokens` に達した時点で巡回を自動打ち切り。
-- **LLM 統合回答生成**: メイン検索ヒット情報と 1-Hop 巡回で得られた専門用語定義を合成し、網羅的なレポートを出力。
+## 2. PageRank 事前演算 ＋ Payload キャッシュ ＆ スコアブースト
+- **事前演算**: インデックス更新時に `[[WikiLink]]` 有向グラフから NetworkX で PageRank を算出。
+- **Payload キャッシュ**: 算出した PageRank スコアを Qdrant `payload["pagerank_score"]` へ永続化。
+- **ブーストスコア**: 検索時に $Score = CosineSim + \alpha \cdot PR(d)$ で統合再ソート。
+
+## 3. FastMCP サーバー連携 (`mcp/server.py`)
+- FastMCP サーバーにより `wiki://` リソース URI および操作ツール（`search`, `compile_stub`, `lint`, `moc` 等）を公開。
