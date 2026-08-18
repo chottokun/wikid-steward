@@ -56,8 +56,8 @@ uv run wikid-steward compile path/to/document.pdf --auto-stable --reviewer "huma
 # 原本リンクを非表示にし、原本バイナリを sources/ にコピー保存しない（社外秘対応）
 uv run wikid-steward compile secret.pdf --hide-source-links --no-save-source
 
-# ディレクトリ内の一括コンパイル
-uv run wikid-steward compile ./documents_dir/
+# ディレクトリ内の一括コンパイル（用語抽出をスキップして高速実行）
+uv run wikid-steward compile ./documents_dir/ --no-extract-terms
 ```
 `_raw/{slug}.md` への生Markdown配置、`wiki/concepts/` への用語・概念ノート群の自動分解、画像アセットの名前空間隔離、WikiLink相互接続を実行します。
 
@@ -96,7 +96,7 @@ OKF メタデータと 1-Hop `[[WikiLink]]` 巡回により、関連用語と統
 ### 7. ナレッジ健全性監査 ＆ セルフヒーリング (`lint`)
 ```bash
 # 監査およびスタブ自動起票
-uv run wikid-steward lint
+uv run wikid-steward lint --auto-stub
 
 # 警告・タイポサジェストのみ表示 (スタブ作成なし)
 uv run wikid-steward lint --dry-run
@@ -111,9 +111,27 @@ uv run wikid-steward moc
 
 ---
 
-## 🧪 テストの実行
+## 🧪 テスト & コード品質チェック
 
 ```bash
-# 全テストスイートの実行
+# CI 同等の高速テストスイート（約 5 秒）
+uv run pytest -m "not slow"
+
+# Ruff によるコードフォーマット & リンティング
+uv run ruff check src/ tests/
+uv run ruff format --check src/ tests/
+
+# 実 PDF 解析（Docling）を含む全テストスイートの実行
 uv run pytest
 ```
+
+---
+
+## 📚 詳細ドキュメント (Documentation)
+
+アーキテクチャ設計、ライフサイクル仕様、拡張プロファイルなどの詳細は [`docs/`](./docs/index.md) をご参照ください。
+
+* [`docs/architecture/`](./docs/architecture/index.md) - アーキテクチャ設計、Linter、検索エンジン、動的型定義
+* [`docs/domain/`](./docs/domain/index.md) - ナレッジライフサイクル、OKF v0.2 仕様、用語集同期
+* [`docs/infrastructure/`](./docs/infrastructure/index.md) - リアルタイム監視デーモン、Qdrant ベクトル検索
+
