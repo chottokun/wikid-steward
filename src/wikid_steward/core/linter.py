@@ -1,10 +1,8 @@
 import difflib
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-import re
-from typing import Any
-import yaml
 
 from wikid_steward.core.human_memo import HUMAN_MEMO_TEMPLATE
 from wikid_steward.core.okf_converter import (
@@ -18,11 +16,11 @@ from wikid_steward.core.slug import generate_slug
 
 def calculate_string_similarity(s1: str, s2: str) -> float:
     """ひらがな・カタカナ正規化と Levenshtein / SequenceMatcher を併用した高精度類似度計算"""
+
     def _normalize(s: str) -> str:
         # ひらがな (U+3041〜U+3096) を カタカナ (U+30A1〜U+30F6) に変換 (差分: +0x60)
         return "".join(
-            chr(ord(c) + 0x60) if "\u3041" <= c <= "\u3096" else c
-            for c in s.lower().strip()
+            chr(ord(c) + 0x60) if "\u3041" <= c <= "\u3096" else c for c in s.lower().strip()
         )
 
     n1, n2 = _normalize(s1), _normalize(s2)
@@ -78,9 +76,7 @@ class KnowledgeLinter:
 
     def run_lint(self, auto_create_stubs: bool = True) -> LintReport:
         if not self.wiki_dir.exists():
-            return LintReport(
-                total_files=0, issues=[], is_healthy=True, stubs_created=[]
-            )
+            return LintReport(total_files=0, issues=[], is_healthy=True, stubs_created=[])
 
         md_files = list(self.wiki_dir.glob("**/*.md"))
         issues: list[LintIssue] = []
@@ -172,7 +168,11 @@ class KnowledgeLinter:
                 # 既存ノートにタイトルまたはSlugが存在するか
                 slug_cand = generate_slug(term)
                 if term in title_to_file or slug_cand in slug_to_file or term in slug_to_file:
-                    target_file = title_to_file.get(term) or slug_to_file.get(slug_cand) or slug_to_file.get(term)
+                    target_file = (
+                        title_to_file.get(term)
+                        or slug_to_file.get(slug_cand)
+                        or slug_to_file.get(term)
+                    )
                     if target_file:
                         referenced_files.add(target_file.relative_to(self.wiki_dir).as_posix())
                 else:

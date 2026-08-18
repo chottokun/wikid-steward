@@ -1,6 +1,7 @@
 import logging
-from pathlib import Path
 import time
+from pathlib import Path
+
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -27,6 +28,7 @@ class RawFolderHandler(FileSystemEventHandler):
     def __init__(self, base_dir: Path):
         super().__init__()
         from wikid_steward.core.config import get_config
+
         cfg = get_config()
         self.base_dir = base_dir
         self.raw_dir = base_dir / cfg.paths.raw_dir
@@ -61,9 +63,7 @@ class RawFolderHandler(FileSystemEventHandler):
         # スラッグ生成 ＆ プロファイル解決
         rel_no_ext = str(rel_path.with_suffix(""))
         slug = generate_slug(rel_no_ext)
-        profile, prof_source, custom_meta = resolve_profile(
-            file_path, self.raw_dir
-        )
+        profile, prof_source, custom_meta = resolve_profile(file_path, self.raw_dir)
 
         # 冪等性チェック: wiki/ に既に reviewed ノートが存在する場合は上書き防止のため処理スキップ
         wiki_note = self.wiki_dir / rel_path.parent / f"{slug}.md"
@@ -88,9 +88,7 @@ class RawFolderHandler(FileSystemEventHandler):
 
             # 2. アセットクリーンアップと画像埋め込み
             staging_note_dir = self.staging_dir / rel_path.parent
-            staging_assets_dir = prepare_clean_assets_dir(
-                staging_note_dir / "assets" / slug
-            )
+            staging_assets_dir = prepare_clean_assets_dir(staging_note_dir / "assets" / slug)
 
             # 画像出力・【層B】メタデータ埋め込み
             extracted_image_names = []
@@ -101,13 +99,12 @@ class RawFolderHandler(FileSystemEventHandler):
                     if hasattr(pic, "image") and pic.image:
                         pic.image.pil_image.save(img_path)
                         from wikid_steward.core.config import get_config
+
                         cfg = get_config()
                         meta_payload = {
                             "uuid": f"img_{slug}_crop{i + 1:02d}",
                             "parent_doc_id": slug,
-                            "original_source": str(
-                                Path(cfg.paths.raw_sources_dir) / rel_path
-                            ),
+                            "original_source": str(Path(cfg.paths.raw_sources_dir) / rel_path),
                             "page_number": getattr(pic, "page_no", 1),
                         }
                         embed_png_metadata(img_path, meta_payload)
@@ -115,6 +112,7 @@ class RawFolderHandler(FileSystemEventHandler):
 
             # 3. OKF 【層A】 Frontmatter 付与 (トレーサビリティプロパティ追加) & Markdown 置換
             from wikid_steward.core.config import get_config
+
             cfg = get_config()
             frontmatter = generate_okf_frontmatter(
                 doc_id=slug,
@@ -125,9 +123,7 @@ class RawFolderHandler(FileSystemEventHandler):
                 profile_source=prof_source,
                 custom_metadata=custom_meta,
             )
-            body = replace_image_links(
-                doc_md, slug, extracted_image_names=extracted_image_names
-            )
+            body = replace_image_links(doc_md, slug, extracted_image_names=extracted_image_names)
             final_content = f"{frontmatter}\n{body}"
 
             # 4. staging/ への配置
@@ -165,9 +161,7 @@ class StagingFolderHandler(FileSystemEventHandler):
             return
 
         if check_reviewed_status(note_path):
-            logger.info(
-                f"[PROMOTE] Promoted status detected for {note_path.name}"
-            )
+            logger.info(f"[PROMOTE] Promoted status detected for {note_path.name}")
             # 原本相対パスの推測
             try:
                 rel_path = note_path.relative_to(self.staging_dir)
@@ -188,6 +182,7 @@ def start_daemon(base_dir: Path | str) -> None:
     """_raw ディレクトリおよび staging ディレクトリのリアルタイム監視デーモンを開始する"""
     base = Path(base_dir)
     from wikid_steward.core.config import get_config
+
     cfg = get_config()
     observer = Observer()
 

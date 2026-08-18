@@ -1,6 +1,4 @@
-from pathlib import Path
-import pytest
-from wikid_steward.core.glossary import GlossaryExtractor, GlossaryTerm
+from wikid_steward.core.glossary import GlossaryTerm
 from wikid_steward.core.relinker import WikiRelinker
 
 

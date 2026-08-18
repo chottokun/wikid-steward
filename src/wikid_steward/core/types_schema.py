@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+
 import yaml
 
 
@@ -104,7 +104,11 @@ class OKFTypeRegistry:
             if cand.exists() and cand.is_file():
                 try:
                     data = yaml.safe_load(cand.read_text(encoding="utf-8"))
-                    if isinstance(data, dict) and "types" in data and isinstance(data["types"], list):
+                    if (
+                        isinstance(data, dict)
+                        and "types" in data
+                        and isinstance(data["types"], list)
+                    ):
                         for item in data["types"]:
                             if isinstance(item, dict) and "name" in item:
                                 t_def = OKFTypeDefinition(

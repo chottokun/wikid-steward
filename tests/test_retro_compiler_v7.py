@@ -1,12 +1,11 @@
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
+
+from wikid_steward.core.okf_converter import parse_okf_frontmatter
 from wikid_steward.core.retro_compiler import (
-    BacklinkCollector,
     RetroCompiler,
     is_trusted_context_source,
 )
-from wikid_steward.core.okf_converter import parse_okf_frontmatter
 
 
 def test_trusted_context_source_filtering():

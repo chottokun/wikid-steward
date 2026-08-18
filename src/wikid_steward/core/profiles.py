@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
+
 import yaml
-from enum import Enum
 
 
 class TableFormerMode(Enum):
@@ -123,9 +124,7 @@ def resolve_profile(
 
                     # プロパティ個別上書き
                     do_ocr = data.get("ocr", base_profile.do_ocr)
-                    scale = float(
-                        data.get("images_scale", base_profile.images_scale)
-                    )
+                    scale = float(data.get("images_scale", base_profile.images_scale))
                     doc_type = data.get("doc_type", base_profile.doc_type)
 
                     resolved = ParseProfile(
@@ -141,6 +140,7 @@ def resolve_profile(
 
     # 2. 優先度 2: ディレクトリポリシーの判定 (フォルダ名キーワード)
     from wikid_steward.core.config import get_config
+
     app_cfg = get_config()
 
     try:

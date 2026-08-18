@@ -1,14 +1,13 @@
 from pathlib import Path
+
 from docx import Document
 from openpyxl import Workbook
 from pptx import Presentation
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import pytest
-from wikid_steward.core.handlers import get_profile_handler
+
 from wikid_steward.core.okf_converter import generate_okf_frontmatter
 from wikid_steward.core.profiles import resolve_profile
-from wikid_steward.core.promoter import promote_document
 from wikid_steward.core.slug import generate_slug
 
 
@@ -52,9 +51,9 @@ def test_variety_ingest_pipeline_all_formats(tmp_path: Path):
     """PDF, DOCX, XLSX, PPTX, サイドカーYAML付きファイルの多種多様な元データバリエーションのパイプライン検証"""
 
     base_raw = tmp_path / "_raw"
-    base_staging = tmp_path / "staging"
-    base_wiki = tmp_path / "wiki"
-    base_raw_sources = tmp_path / "raw_sources"
+    tmp_path / "staging"
+    tmp_path / "wiki"
+    tmp_path / "raw_sources"
 
     # 1. 論文 PDF (papers/ フォルダ)
     pdf_paper = base_raw / "papers" / "llm_survey.pdf"
@@ -104,24 +103,18 @@ def test_variety_ingest_pipeline_all_formats(tmp_path: Path):
     for raw_file, expected_profile, expected_source in test_files:
         profile, prof_source, custom_meta = resolve_profile(raw_file, base_raw)
 
-        print(
-            f"File: {raw_file.name} -> Profile: {profile.name} (Source: {prof_source})"
-        )
+        print(f"File: {raw_file.name} -> Profile: {profile.name} (Source: {prof_source})")
 
         assert profile.name == expected_profile
         assert prof_source == expected_source
 
         # OKF ヘッダー生成のテスト
-        slug = generate_slug(
-            str(raw_file.relative_to(base_raw).with_suffix(""))
-        )
+        slug = generate_slug(str(raw_file.relative_to(base_raw).with_suffix("")))
         frontmatter = generate_okf_frontmatter(
             doc_id=slug,
             title=raw_file.stem,
             doc_type=profile.doc_type,
-            source_path=str(
-                Path("raw_sources") / raw_file.relative_to(base_raw)
-            ),
+            source_path=str(Path("raw_sources") / raw_file.relative_to(base_raw)),
             profile_used=profile.name,
             profile_source=prof_source,
             custom_metadata=custom_meta,

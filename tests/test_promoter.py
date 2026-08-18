@@ -1,22 +1,18 @@
 from pathlib import Path
-import pytest
+
 from wikid_steward.core.promoter import check_reviewed_status, promote_document
 
 
 def test_check_reviewed_status_unreviewed(tmp_path: Path):
     md_file = tmp_path / "test.md"
-    md_file.write_text(
-        "---\nid: test\nstatus: unreviewed\n---\n# Content", encoding="utf-8"
-    )
+    md_file.write_text("---\nid: test\nstatus: unreviewed\n---\n# Content", encoding="utf-8")
 
     assert check_reviewed_status(md_file) is False
 
 
 def test_check_reviewed_status_reviewed(tmp_path: Path):
     md_file = tmp_path / "test.md"
-    md_file.write_text(
-        "---\nid: test\nstatus: Reviewed\n---\n# Content", encoding="utf-8"
-    )
+    md_file.write_text("---\nid: test\nstatus: Reviewed\n---\n# Content", encoding="utf-8")
 
     assert check_reviewed_status(md_file) is True
 
@@ -55,6 +51,7 @@ def test_promote_document_flow(tmp_path: Path):
         base_dir=base_dir,
         raw_relative_path=Path("projA/doc1.pdf"),
         commit_git=False,  # テスト用擬似Git環境
+        extract_terms=False,
     )
 
     # 移動検証: staging からは消えていること
@@ -97,6 +94,7 @@ def test_promote_document_backup_on_conflict(tmp_path: Path):
         base_dir=base_dir,
         raw_relative_path=None,
         commit_git=False,
+        extract_terms=False,
     )
 
     # バックアップファイル (.bak) が作成されていること
@@ -105,6 +103,4 @@ def test_promote_document_backup_on_conflict(tmp_path: Path):
     assert bak_files[0].read_text(encoding="utf-8") == "Old Human Edit Content"
 
     # 新しいノートが配置されていること
-    assert existing_wiki_note.read_text(encoding="utf-8").endswith(
-        "# New Content"
-    )
+    assert existing_wiki_note.read_text(encoding="utf-8").endswith("# New Content")

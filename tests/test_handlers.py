@@ -1,5 +1,3 @@
-from pathlib import Path
-import pytest
 from wikid_steward.core.handlers import (
     BaseProfileHandler,
     DrawingHandler,
@@ -7,20 +5,14 @@ from wikid_steward.core.handlers import (
     get_profile_handler,
     register_profile_handler,
 )
-from wikid_steward.core.profiles import DRAWING_PROFILE, PAPER_PROFILE
 
 
 class CustomSpecialHandler(BaseProfileHandler):
     """ユーザー定義のカスタムパースハンドラー例"""
 
-    def post_process_markdown(
-        self, markdown_text: str, profile_name: str
-    ) -> str:
+    def post_process_markdown(self, markdown_text: str, profile_name: str) -> str:
         # カスタム処理: 特有のヘッダーを注記として挿入する独自コード
-        return (
-            f"> [!custom] Custom Processed by {profile_name}\n\n"
-            + markdown_text
-        )
+        return f"> [!custom] Custom Processed by {profile_name}\n\n" + markdown_text
 
 
 def test_get_builtin_handlers():

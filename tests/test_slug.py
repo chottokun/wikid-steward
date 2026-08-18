@@ -1,5 +1,5 @@
 import unicodedata
-import pytest
+
 from wikid_steward.core.slug import generate_slug
 
 
@@ -19,13 +19,13 @@ def test_slug_nfd_normalization():
     nfd_text = "フォルダ/\u304b\u3099っぱ.pdf"
     slug = generate_slug(nfd_text)
     # NFC「が」 (\u304c) に正規化されていることを検証
-    expected_nfc = unicodedata.normalize("NFC", "フォルダ/がっぱ.pdf")
+    unicodedata.normalize("NFC", "フォルダ/がっぱ.pdf")
     assert "\u304c" in slug
     assert "\u3099" not in slug
 
 
 def test_slug_forbidden_characters():
-    path = "project:1/sub*dir?/file\"<name>|test[1]#ver^1,2;3!4&5(6)@7.8=9+10"
+    path = 'project:1/sub*dir?/file"<name>|test[1]#ver^1,2;3!4&5(6)@7.8=9+10'
     slug = generate_slug(path)
     # 禁止記号がハイフンに変換され、連続ハイフンが縮約されていること
     assert ":" not in slug

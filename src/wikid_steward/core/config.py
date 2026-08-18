@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+
 import yaml
 from dotenv import load_dotenv
 
@@ -92,7 +92,9 @@ class VectorDBSettings:
 @dataclass
 class CompilerSettings:
     auto_moc: bool = True  # コンパイル完了時に MOC (index.md) を自動更新
-    extract_full_text: bool = False  # 用語・概念抽出時に全文コンテキストを使用 (長大モデル使用時は true)
+    extract_full_text: bool = (
+        False  # 用語・概念抽出時に全文コンテキストを使用 (長大モデル使用時は true)
+    )
     max_extract_chars: int = 12000  # 用語抽出時の最大文字数上限 (0で無制限)
     default_status: str = "draft"  # デフォルトステータス (draft | stable)
 
@@ -104,9 +106,7 @@ class AppConfig:
     paths: PathSettings = field(default_factory=PathSettings)
     compiler: CompilerSettings = field(default_factory=CompilerSettings)
     relinker: RelinkerSettings = field(default_factory=RelinkerSettings)
-    retro_compilation: RetroCompilationSettings = field(
-        default_factory=RetroCompilationSettings
-    )
+    retro_compilation: RetroCompilationSettings = field(default_factory=RetroCompilationSettings)
     vector_db: VectorDBSettings = field(default_factory=VectorDBSettings)
     profiles: dict[str, ProfileSetting] = field(
         default_factory=lambda: {
@@ -131,9 +131,7 @@ class AppConfig:
         }
     )
     relinker: RelinkerSettings = field(default_factory=RelinkerSettings)
-    retro_compilation: RetroCompilationSettings = field(
-        default_factory=RetroCompilationSettings
-    )
+    retro_compilation: RetroCompilationSettings = field(default_factory=RetroCompilationSettings)
     vector_db: VectorDBSettings = field(default_factory=VectorDBSettings)
     config_file_path: Path | None = None
 
@@ -229,7 +227,9 @@ def load_app_config(
                 d = data["relinker"]
                 if "stop_words" in d and isinstance(d["stop_words"], list):
                     cfg.relinker.stop_words = d["stop_words"]
-                cfg.relinker.min_term_length = int(d.get("min_term_length", cfg.relinker.min_term_length))
+                cfg.relinker.min_term_length = int(
+                    d.get("min_term_length", cfg.relinker.min_term_length)
+                )
                 cfg.relinker.mode = d.get("mode", cfg.relinker.mode)
 
             # 6. Retro Compilation 設定
@@ -245,22 +245,44 @@ def load_app_config(
                 cfg.vector_db.provider = d.get("provider", cfg.vector_db.provider)
                 cfg.vector_db.url = d.get("url", cfg.vector_db.url)
                 cfg.vector_db.api_key = d.get("api_key", cfg.vector_db.api_key)
-                cfg.vector_db.collection_name = d.get("collection_name", cfg.vector_db.collection_name)
-                cfg.vector_db.max_context_tokens = int(d.get("max_context_tokens", cfg.vector_db.max_context_tokens))
-                cfg.vector_db.embedding_provider = d.get("embedding_provider", cfg.vector_db.embedding_provider)
-                cfg.vector_db.embedding_base_url = d.get("embedding_base_url", cfg.vector_db.embedding_base_url)
-                cfg.vector_db.embedding_model = d.get("embedding_model", cfg.vector_db.embedding_model)
-                cfg.vector_db.embedding_api_key = d.get("embedding_api_key", cfg.vector_db.embedding_api_key)
-                cfg.vector_db.max_hub_degree = int(d.get("max_hub_degree", cfg.vector_db.max_hub_degree))
-                cfg.vector_db.max_traversal_tokens = int(d.get("max_traversal_tokens", cfg.vector_db.max_traversal_tokens))
+                cfg.vector_db.collection_name = d.get(
+                    "collection_name", cfg.vector_db.collection_name
+                )
+                cfg.vector_db.max_context_tokens = int(
+                    d.get("max_context_tokens", cfg.vector_db.max_context_tokens)
+                )
+                cfg.vector_db.embedding_provider = d.get(
+                    "embedding_provider", cfg.vector_db.embedding_provider
+                )
+                cfg.vector_db.embedding_base_url = d.get(
+                    "embedding_base_url", cfg.vector_db.embedding_base_url
+                )
+                cfg.vector_db.embedding_model = d.get(
+                    "embedding_model", cfg.vector_db.embedding_model
+                )
+                cfg.vector_db.embedding_api_key = d.get(
+                    "embedding_api_key", cfg.vector_db.embedding_api_key
+                )
+                cfg.vector_db.max_hub_degree = int(
+                    d.get("max_hub_degree", cfg.vector_db.max_hub_degree)
+                )
+                cfg.vector_db.max_traversal_tokens = int(
+                    d.get("max_traversal_tokens", cfg.vector_db.max_traversal_tokens)
+                )
 
             # 8. Compiler 設定
             if "compiler" in data and isinstance(data["compiler"], dict):
                 d = data["compiler"]
                 cfg.compiler.auto_moc = bool(d.get("auto_moc", cfg.compiler.auto_moc))
-                cfg.compiler.extract_full_text = bool(d.get("extract_full_text", cfg.compiler.extract_full_text))
-                cfg.compiler.max_extract_chars = int(d.get("max_extract_chars", cfg.compiler.max_extract_chars))
-                cfg.compiler.default_status = str(d.get("default_status", cfg.compiler.default_status))
+                cfg.compiler.extract_full_text = bool(
+                    d.get("extract_full_text", cfg.compiler.extract_full_text)
+                )
+                cfg.compiler.max_extract_chars = int(
+                    d.get("max_extract_chars", cfg.compiler.max_extract_chars)
+                )
+                cfg.compiler.default_status = str(
+                    d.get("default_status", cfg.compiler.default_status)
+                )
 
         except Exception as e:
             print(f"Warning: Failed to load config file {target_config}: {e}")

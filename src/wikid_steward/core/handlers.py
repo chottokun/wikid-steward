@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Any
-from wikid_steward.core.profiles import ParseProfile
 
 
 class BaseProfileHandler:
@@ -9,9 +8,7 @@ class BaseProfileHandler:
     独自のパース後処理やカスタムアセット抽出コードをパターンごとに実装して割り込ませることができる。
     """
 
-    def post_process_markdown(
-        self, markdown_text: str, profile_name: str
-    ) -> str:
+    def post_process_markdown(self, markdown_text: str, profile_name: str) -> str:
         """Markdown 生成直後にパターン固有のテキスト加工・クリーンアップコードを適用する。
 
         Args:
@@ -23,9 +20,7 @@ class BaseProfileHandler:
         """
         return markdown_text
 
-    def process_custom_assets(
-        self, conv_result: Any, assets_dir: Path
-    ) -> list[dict[str, Any]]:
+    def process_custom_assets(self, conv_result: Any, assets_dir: Path) -> list[dict[str, Any]]:
         """パターン固有のアセット（図面枠、タイトルブロック、特殊画像）を切り出すカスタムコード。
 
         Args:
@@ -41,9 +36,7 @@ class BaseProfileHandler:
 class PaperHandler(BaseProfileHandler):
     """論文・文献パターン向け標準ハンドラー"""
 
-    def post_process_markdown(
-        self, markdown_text: str, profile_name: str
-    ) -> str:
+    def post_process_markdown(self, markdown_text: str, profile_name: str) -> str:
         # 論文向け後処理 (必要に応じたフォーマット調整)
         return markdown_text
 
@@ -55,9 +48,7 @@ class DrawingHandler(BaseProfileHandler):
     部品構成表を抽出し、Markdown 内に専用の構造化 HTML <table> 表として自動記載する。
     """
 
-    def post_process_markdown(
-        self, markdown_text: str, profile_name: str
-    ) -> str:
+    def post_process_markdown(self, markdown_text: str, profile_name: str) -> str:
         # 図面テキストから SBOM / BOM パーツ項目を検出・抽出するカスタムロジック
         sbom_items = self._extract_sbom_items(markdown_text)
 
@@ -150,9 +141,7 @@ _HANDLERS_REGISTRY: dict[str, BaseProfileHandler] = {
 }
 
 
-def register_profile_handler(
-    profile_name: str, handler: BaseProfileHandler
-) -> None:
+def register_profile_handler(profile_name: str, handler: BaseProfileHandler) -> None:
     """ユーザー定義のパターン別カスタムコード（ハンドラー）を動的に登録する。
 
     Args:

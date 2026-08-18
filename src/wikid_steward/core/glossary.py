@@ -1,10 +1,14 @@
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from wikid_steward.core.llm_client import LLMConfig, OpenAICompatibleLLMClient
+
+from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
 from wikid_steward.core.okf_converter import generate_okf_frontmatter
 from wikid_steward.core.slug import generate_slug
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -24,9 +28,7 @@ class GlossaryExtractor:
     def __init__(self, llm_client: OpenAICompatibleLLMClient | None = None):
         self.llm_client = llm_client or OpenAICompatibleLLMClient()
 
-    def extract_terms(
-        self, text: str, max_chars: int | None = None
-    ) -> list[GlossaryTerm]:
+    def extract_terms(self, text: str, max_chars: int | None = None) -> list[GlossaryTerm]:
         """テキストから主要な専門用語リストを抽出する"""
         if not text or len(text.strip()) < 10:
             return []
@@ -119,7 +121,11 @@ class GlossaryExtractor:
         heading_matches = re.findall(r"^#+\s+(.+)$", text, flags=re.MULTILINE)
         for h in heading_matches[:3]:
             h_clean = h.strip("#").strip()
-            if len(h_clean) > 3 and not h_clean.startswith("概要") and not h_clean.startswith("目次"):
+            if (
+                len(h_clean) > 3
+                and not h_clean.startswith("概要")
+                and not h_clean.startswith("目次")
+            ):
                 slug = generate_slug(h_clean)
                 fallback_terms.append(
                     GlossaryTerm(
@@ -132,7 +138,19 @@ class GlossaryExtractor:
 
         # 固有名詞・頭字語のパターンマッチ (例: LoRA, RAG, BERT, GPT 等)
         acronyms = set(re.findall(r"\b[A-Z][A-Za-z0-9-]{2,15}\b", text[:3000]))
-        stop_words = {"The", "This", "That", "With", "From", "Using", "Paper", "Model", "Method", "Figure", "Table"}
+        stop_words = {
+            "The",
+            "This",
+            "That",
+            "With",
+            "From",
+            "Using",
+            "Paper",
+            "Model",
+            "Method",
+            "Figure",
+            "Table",
+        }
         for acr in sorted(acronyms - stop_words):
             if len(fallback_terms) >= 5:
                 break
@@ -149,9 +167,7 @@ class GlossaryExtractor:
 
         return fallback_terms
 
-    def create_glossary_note(
-        self, term: GlossaryTerm, output_dir: Path
-    ) -> Path:
+    def create_glossary_note(self, term: GlossaryTerm, output_dir: Path) -> Path:
         """用語説明ノート (wiki/glossary/{slug}.md) を保存する"""
         output_dir.mkdir(parents=True, exist_ok=True)
         note_path = output_dir / f"{term.slug}.md"
@@ -169,8 +185,7 @@ class GlossaryExtractor:
         body = (
             f"# {term.canonical_title}\n\n"
             f"## 概要\n{term.description}\n\n"
-            f"## 別名・表記揺れ\n"
-            + "\n".join([f"- {alias}" for alias in term.aliases])
+            f"## 別名・表記揺れ\n" + "\n".join([f"- {alias}" for alias in term.aliases])
         )
 
         note_content = f"{frontmatter}\n{body}\n"

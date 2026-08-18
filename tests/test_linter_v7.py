@@ -1,6 +1,6 @@
-import pytest
 from pathlib import Path
-from wikid_steward.core.linter import KnowledgeLinter, LintIssue
+
+from wikid_steward.core.linter import KnowledgeLinter
 
 
 def test_linter_stub_creation_and_typo_suggest(tmp_path: Path):
@@ -55,7 +55,7 @@ status: stable
     # 未定義リンクに対するスタブが wiki/stubs/ に作成されているか
     assert stubs_dir.exists()
     stub_files = list(stubs_dir.glob("*.md"))
-    stub_names = [f.stem for f in stub_files]
+    [f.stem for f in stub_files]
     assert len(stub_files) >= 1
 
     # スタブファイルの内容（OKF v0.2 & 手書きメモ）を検証

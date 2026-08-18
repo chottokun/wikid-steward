@@ -1,6 +1,5 @@
-from pathlib import Path
 import re
-from typing import Any
+
 from wikid_steward.core.glossary import GlossaryTerm
 
 
@@ -23,9 +22,7 @@ class WikiRelinker:
 
     def __init__(self, stop_words: set[str] | None = None):
         self.stop_words = (
-            {w.upper() for w in stop_words}
-            if stop_words is not None
-            else self.DEFAULT_STOP_WORDS
+            {w.upper() for w in stop_words} if stop_words is not None else self.DEFAULT_STOP_WORDS
         )
 
     def _build_term_pattern(self, sorted_aliases: list[str]) -> re.Pattern:
@@ -146,6 +143,7 @@ def convert_wikilinks_to_gfm(
         wiki_map: 用語名から wiki 配下の相対パスへのマッピング (例: {"PID制御": "concepts/pid-control.md"})
         base_path: ルート URL プレフィックス (デフォルト: "/wiki")
     """
+
     def _replace_wikilink(match: re.Match) -> str:
         inner = match.group(1).strip()
         if "|" in inner:

@@ -1,13 +1,11 @@
 from pathlib import Path
-import pytest
 from unittest.mock import MagicMock
 
-from wikid_steward.core.config import AppConfig, get_config
+import pytest
+
 from wikid_steward.core.document_compiler import DocumentToOKFCompiler
-from wikid_steward.core.human_memo import extract_human_memo, merge_human_memo
 from wikid_steward.core.linter import KnowledgeLinter
 from wikid_steward.core.okf_converter import parse_okf_frontmatter
-from wikid_steward.core.types_schema import OKFTypeRegistry
 
 
 @pytest.fixture
@@ -26,6 +24,7 @@ def test_env(tmp_path: Path):
 # 1. 破壊的・極端な入力に対する堅牢性テスト (Adversarial Inputs)
 # ==============================================================================
 
+
 def test_extreme_filename_and_emoji_handling(test_env: Path):
     """絵文字、連続記号、極端に長いファイル名、macOS濁点(NFD)混じりのファイルを安全に処理できるか検証"""
     weird_name = "🚀【最新版】!!__設計_仕様書 (v2.0) [超重要] #1 $&+.md"
@@ -37,7 +36,9 @@ def test_extreme_filename_and_emoji_handling(test_env: Path):
 
     assert res.raw_markdown_path.exists()
     assert res.main_note_path.exists()
-    assert not any(c in res.main_note_path.name for c in [":", "*", "?", '"', "<", ">", "|", "#", "🚀"])
+    assert not any(
+        c in res.main_note_path.name for c in [":", "*", "?", '"', "<", ">", "|", "#", "🚀"]
+    )
 
 
 def test_empty_and_corrupted_document_handling(test_env: Path):
@@ -59,11 +60,14 @@ def test_empty_and_corrupted_document_handling(test_env: Path):
 # 2. LLM 応答異常・JSON 破損時のフォールバック耐性テスト
 # ==============================================================================
 
+
 def test_corrupted_llm_json_response_resilience(test_env: Path):
     """LLM が壊れた JSON や意図しないプレーンテキストを返した場合でも、例外で落ちずにコンパイルを完遂できるか検証"""
     mock_llm = MagicMock()
     # 壊れた文字列や不正なマークダウンを返すシミュレーション
-    mock_llm.generate_chat_completion.return_value = "これはJSONではありません。```json {不正なJSON```"
+    mock_llm.generate_chat_completion.return_value = (
+        "これはJSONではありません。```json {不正なJSON```"
+    )
 
     doc_path = test_env / "resilience_test.md"
     doc_path.write_text("# 堅牢性テスト\n\nLLMの応答が壊れた場合の動作確認。", encoding="utf-8")
@@ -80,10 +84,14 @@ def test_corrupted_llm_json_response_resilience(test_env: Path):
 # 3. 冪等性（Idempotency）と手書きメモの100%保護テスト
 # ==============================================================================
 
+
 def test_repeated_compilation_idempotency_and_memo_preservation(test_env: Path):
     """同一ファイルを 5 回連続でコンパイルしても、手書きメモが破壊されず、言及ソースが重複増殖しないことを検証"""
     doc_path = test_env / "idempotency_spec.md"
-    doc_path.write_text("# 冪等性仕様書\n\n分散トランザクション (Distributed Transaction) の仕様。\n", encoding="utf-8")
+    doc_path.write_text(
+        "# 冪等性仕様書\n\n分散トランザクション (Distributed Transaction) の仕様。\n",
+        encoding="utf-8",
+    )
 
     compiler = DocumentToOKFCompiler(base_dir=test_env)
 
@@ -114,6 +122,7 @@ def test_repeated_compilation_idempotency_and_memo_preservation(test_env: Path):
 # ==============================================================================
 # 4. 特殊構文（コードブロック・数式・HTMLテーブル・非標準タグ）の保護テスト
 # ==============================================================================
+
 
 def test_code_block_and_html_table_protection(test_env: Path):
     """コードブロック内のキーワードや HTML テーブル内のタグが WikiRelinker によって誤置換・破壊されないことを検証"""
@@ -161,10 +170,13 @@ $$
 # 5. 生成されたナレッジベース全体の静的健全性監査 (Linter Audit)
 # ==============================================================================
 
+
 def test_generated_wiki_knowledge_linter_health(test_env: Path):
     """コンパイルによって生成された Wiki ノート群が KnowledgeLinter の監査で Healthy と判定されることを検証"""
     sample_doc = test_env / "audit_target.md"
-    sample_doc.write_text("# 監査対象文書\n\nマイクロサービスアーキテクチャの定義。", encoding="utf-8")
+    sample_doc.write_text(
+        "# 監査対象文書\n\nマイクロサービスアーキテクチャの定義。", encoding="utf-8"
+    )
 
     compiler = DocumentToOKFCompiler(base_dir=test_env)
     compiler.compile_file(file_path=sample_doc, status="stable", extract_terms=False, auto_moc=True)
@@ -174,5 +186,7 @@ def test_generated_wiki_knowledge_linter_health(test_env: Path):
 
     # 致命的な問題（不正なYAML、予約名違反など）が0件であること
     assert report.total_files >= 1
-    fatal_issues = [i for i in report.issues if i.issue_type in ["frontmatter_error", "corrupted_yaml"]]
+    fatal_issues = [
+        i for i in report.issues if i.issue_type in ["frontmatter_error", "corrupted_yaml"]
+    ]
     assert len(fatal_issues) == 0

@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
 import logging
-from pathlib import Path
 import shutil
-from typing import Any
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 
 from wikid_steward.core.config import AppConfig, get_config
 from wikid_steward.core.glossary import GlossaryExtractor, GlossaryTerm
@@ -26,8 +26,6 @@ from wikid_steward.core.parser import KnowledgeParser
 from wikid_steward.core.profiles import resolve_profile
 from wikid_steward.core.relinker import WikiRelinker
 from wikid_steward.core.slug import generate_slug
-
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -240,9 +238,7 @@ class DocumentToOKFCompiler:
         raw_fm_str = generate_okf_v7_frontmatter(raw_okf_doc)
         raw_markdown_path = raw_dir / f"{slug}.md"
         existing_raw_content = (
-            raw_markdown_path.read_text(encoding="utf-8")
-            if raw_markdown_path.exists()
-            else None
+            raw_markdown_path.read_text(encoding="utf-8") if raw_markdown_path.exists() else None
         )
 
         raw_body_with_memo = (
@@ -266,9 +262,7 @@ class DocumentToOKFCompiler:
                 if self.config.compiler.extract_full_text
                 else self.config.compiler.max_extract_chars
             )
-            extracted_terms = extractor.extract_terms(
-                raw_extracted_text, max_chars=max_chars
-            )
+            extracted_terms = extractor.extract_terms(raw_extracted_text, max_chars=max_chars)
 
             today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -356,9 +350,7 @@ class DocumentToOKFCompiler:
         # 手書きメモ保護とセクション付加
         main_note_path = wiki_dir / f"{slug}.md"
         existing_main_content = (
-            main_note_path.read_text(encoding="utf-8")
-            if main_note_path.exists()
-            else None
+            main_note_path.read_text(encoding="utf-8") if main_note_path.exists() else None
         )
 
         main_sources = []
@@ -397,9 +389,7 @@ class DocumentToOKFCompiler:
         main_note_path.write_text(final_main_content, encoding="utf-8")
 
         # 7. MOC (index.md) の自動同期
-        should_run_moc = (
-            auto_moc if auto_moc is not None else self.config.compiler.auto_moc
-        )
+        should_run_moc = auto_moc if auto_moc is not None else self.config.compiler.auto_moc
         if should_run_moc:
             try:
                 from wikid_steward.core.moc_generator import generate_all_mocs
@@ -450,8 +440,7 @@ class DocumentToOKFCompiler:
             if file_p.is_file() and file_p.suffix.lower() in supported_exts:
                 # _raw, wiki, .git などの中間/出力ディレクトリは除外
                 if any(
-                    part in [".git", "_raw", "wiki", "staging", "assets"]
-                    for part in file_p.parts
+                    part in [".git", "_raw", "wiki", "staging", "assets"] for part in file_p.parts
                 ):
                     continue
                 try:
@@ -471,9 +460,7 @@ class DocumentToOKFCompiler:
                     logger.error(f"Failed to compile {file_p}: {e}")
 
         # ディレクトリ一括処理完了時に MOC を同期
-        should_run_moc = (
-            auto_moc if auto_moc is not None else self.config.compiler.auto_moc
-        )
+        should_run_moc = auto_moc if auto_moc is not None else self.config.compiler.auto_moc
         if should_run_moc:
             wiki_dir = output_dir or (self.base_dir / self.config.paths.wiki_dir)
             try:

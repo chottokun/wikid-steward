@@ -1,12 +1,10 @@
-import pytest
-from datetime import datetime, timezone
 from wikid_steward.core.okf_converter import (
+    ActorInfo,
+    OKFDocumentData,
+    SourceEntry,
+    VerifiedEntry,
     generate_okf_v7_frontmatter,
     parse_okf_frontmatter,
-    ActorInfo,
-    VerifiedEntry,
-    SourceEntry,
-    OKFDocumentData,
 )
 
 
@@ -19,7 +17,9 @@ def test_generate_and_parse_okf_v7_frontmatter():
         stale_after="2027-08-14",
         generated=ActorInfo(by="wikid-steward/auto-compiler", at="2026-08-14T05:20:00Z"),
         verified=[VerifiedEntry(by="human:chottokun", at="2026-08-14T05:22:00Z")],
-        sources=[SourceEntry(id="drawing-pdf", resource="/sources/drawing.pdf", title="技術図面 PDF")],
+        sources=[
+            SourceEntry(id="drawing-pdf", resource="/sources/drawing.pdf", title="技術図面 PDF")
+        ],
         tags=["architecture", "wiki"],
     )
 
