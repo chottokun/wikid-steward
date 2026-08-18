@@ -33,7 +33,7 @@ def test_extreme_filename_and_emoji_handling(test_env: Path):
     doc_path.write_text("# 極端なファイル名テスト\n\n内容の検証。", encoding="utf-8")
 
     compiler = DocumentToOKFCompiler(base_dir=test_env)
-    res = compiler.compile_file(file_path=doc_path, status="stable")
+    res = compiler.compile_file(file_path=doc_path, status="stable", extract_terms=False)
 
     assert res.raw_markdown_path.exists()
     assert res.main_note_path.exists()
@@ -46,7 +46,7 @@ def test_empty_and_corrupted_document_handling(test_env: Path):
     empty_doc.write_text("", encoding="utf-8")
 
     compiler = DocumentToOKFCompiler(base_dir=test_env)
-    res = compiler.compile_file(file_path=empty_doc)
+    res = compiler.compile_file(file_path=empty_doc, extract_terms=True)
 
     assert res.raw_markdown_path.exists()
     assert res.main_note_path.exists()

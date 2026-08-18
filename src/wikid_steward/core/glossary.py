@@ -28,6 +28,9 @@ class GlossaryExtractor:
         self, text: str, max_chars: int | None = None
     ) -> list[GlossaryTerm]:
         """テキストから主要な専門用語リストを抽出する"""
+        if not text or len(text.strip()) < 10:
+            return []
+
         system_prompt = (
             "あなたは高度な技術文書・論文の用語解析AIです。"
             "テキストから重要で専門性の高い概念・用語（Key Terms / Concepts）を抽出し、"
