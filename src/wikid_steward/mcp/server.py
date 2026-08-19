@@ -30,12 +30,17 @@ def get_wiki_resource(path: str) -> str:
 
 
 @mcp.tool()
-def search(query: str, top_k: int = 3, backend: str = "auto") -> dict[str, Any]:
-    """wikid-steward のナレッジベースを 1-Hop グラフ巡回で検索し統合回答を生成する"""
+def search(
+    query: str,
+    top_k: int = 3,
+    backend: str = "auto",
+    doc_types: list[str] | None = None,
+) -> dict[str, Any]:
+    """wikid-steward のナレッジベースを 1-Hop グラフ巡回で検索し統合回答を生成する (doc_types で絞り込み可能)"""
     cfg = get_config()
     wiki_dir = Path.cwd() / cfg.paths.wiki_dir
     engine = create_search_engine(backend=backend)
-    res = engine.search(query=query, wiki_dir=wiki_dir, top_k=top_k)
+    res = engine.search(query=query, wiki_dir=wiki_dir, top_k=top_k, doc_types=doc_types)
 
     return {
         "query": res.query,

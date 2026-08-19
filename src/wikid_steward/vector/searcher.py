@@ -35,6 +35,7 @@ class SearcherProtocol(Protocol):
         wiki_dir: Path | str,
         top_k: int = 3,
         max_traversal_depth: int = 1,
+        doc_types: list[str] | None = None,
     ) -> SearchResult: ...
 
 
@@ -69,10 +70,13 @@ class FallbackSearchEngine(SearcherProtocol):
         wiki_dir: Path | str,
         top_k: int = 3,
         max_traversal_depth: int = 1,
+        doc_types: list[str] | None = None,
     ) -> SearchResult:
         if self.primary_engine is not None:
             try:
-                res = self.primary_engine.search(query, wiki_dir, top_k, max_traversal_depth)
+                res = self.primary_engine.search(
+                    query, wiki_dir, top_k, max_traversal_depth, doc_types=doc_types
+                )
                 if res and res.main_hits:
                     return res
                 print(
@@ -83,7 +87,9 @@ class FallbackSearchEngine(SearcherProtocol):
                     f"[FallbackSearchEngine] Primary search failed with error: {e}. Executing fallback engine..."
                 )
 
-        return self.fallback_engine.search(query, wiki_dir, top_k, max_traversal_depth)
+        return self.fallback_engine.search(
+            query, wiki_dir, top_k, max_traversal_depth, doc_types=doc_types
+        )
 
 
 def create_search_engine(
@@ -138,6 +144,7 @@ class WikiGraphSearchEngine(SearcherProtocol):
         wiki_dir: Path | str,
         top_k: int = 3,
         max_traversal_depth: int = 1,
+        doc_types: list[str] | None = None,
     ) -> SearchResult:
         """クエリに対して Wiki グラフ拡張検索を実行し、統合回答と根拠ノードを返却する。"""
         wiki_path = Path(wiki_dir)
@@ -153,11 +160,20 @@ class WikiGraphSearchEngine(SearcherProtocol):
             )
         query_vector = query_vectors[0]
 
+        query_filter = None
+        if doc_types:
+            from qdrant_client.models import FieldCondition, Filter, MatchAny
+
+            query_filter = Filter(
+                must=[FieldCondition(key="doc_type", match=MatchAny(any=doc_types))]
+            )
+
         try:
             q_res = self.indexer.client.query_points(
                 collection_name=self.indexer.collection_name,
                 query=query_vector,
-                limit=top_k,
+                query_filter=query_filter,
+                limit=top_k * 2 if doc_types else top_k,
             )
             search_results = q_res.points
         except Exception as e:
@@ -170,6 +186,8 @@ class WikiGraphSearchEngine(SearcherProtocol):
         alpha = 0.2  # PageRank ブースト重み係数
         for res in search_results:
             payload = res.payload or {}
+            if doc_types and payload.get("doc_type") not in doc_types:
+                continue
             pr_score = float(payload.get("pagerank_score", 0.0))
             raw_sim = float(res.score)
             boosted_score = raw_sim + (alpha * pr_score)
@@ -185,8 +203,9 @@ class WikiGraphSearchEngine(SearcherProtocol):
                 if len(term) >= 2:
                     wikilinks_found.add(term)
 
-        # PageRank ブースト後のスコアで再ソート
+        # PageRank ブースト後のスコアで再ソートし、top_k に制限
         main_hits.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+        main_hits = main_hits[:top_k]
 
         # クエリ単体からの用語一致も補完
         for term_candidate in query.split():

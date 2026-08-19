@@ -36,11 +36,13 @@ class OpenAICompatibleEmbeddingClient:
         base_url: str = "http://localhost:11434/v1",
         api_key: str = "ollama",
         model: str = "bge-small-en",
+        timeout: float = 3.0,
     ):
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
-        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key)
+        self.timeout = timeout
+        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
 
     def embed_texts(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         """テキストのリストからバッチ処理で埋め込みベクトルを生成する"""
@@ -211,11 +213,60 @@ class QdrantKnowledgeIndexer:
                 vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
             )
 
-    def index_wiki_directory(self, wiki_dir: Path | str) -> int:
-        """wiki/ 配下の全 Markdown ノートを分解し、Qdrant へベクトルインデックス化する"""
+    def prune_deleted_points(self, wiki_dir: Path | str) -> int:
+        """ディスク上から物理削除された Markdown ファイルに対応する Qdrant 内の孤立 Point を自動パージする"""
         base_path = Path(wiki_dir)
         if not base_path.exists():
             return 0
+
+        collections = [c.name for c in self.client.get_collections().collections]
+        if self.collection_name not in collections:
+            return 0
+
+        existing_rel_paths = {str(f.relative_to(base_path)) for f in base_path.glob("**/*.md")}
+
+        # Qdrant から全ポイントの payload (file_path) をスクロール取得
+        orphan_ids: list[str] = []
+        offset = None
+        while True:
+            points, next_offset = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=100,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            for pt in points:
+                payload = pt.payload or {}
+                f_path = payload.get("file_path")
+                if f_path and f_path not in existing_rel_paths:
+                    orphan_ids.append(str(pt.id))
+
+            if next_offset is None or not points:
+                break
+            offset = next_offset
+
+        if orphan_ids:
+            from qdrant_client.models import PointIdsList
+
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=PointIdsList(points=orphan_ids),
+            )
+            print(
+                f"[Indexer GC] Pruned {len(orphan_ids)} orphan points from collection '{self.collection_name}'."
+            )
+
+        return len(orphan_ids)
+
+    def index_wiki_directory(self, wiki_dir: Path | str, prune: bool = True) -> int:
+        """wiki/ 配下の全 Markdown ノートを分解し、Qdrant へベクトルインデックス化する (prune=True で孤立Point自動GC)"""
+        base_path = Path(wiki_dir)
+        if not base_path.exists():
+            return 0
+
+        if prune:
+            self.prune_deleted_points(wiki_dir=base_path)
 
         md_files = list(base_path.glob("**/*.md"))
         chunks: list[KnowledgeChunk] = []
@@ -230,6 +281,7 @@ class QdrantKnowledgeIndexer:
                 doc_id = md_file.stem
                 is_glossary = "glossary" in str(md_file.parent)
 
+                body = content
                 # OKF Frontmatter の解析
                 if content.startswith("---"):
                     parts = content.split("---", 2)
@@ -238,9 +290,12 @@ class QdrantKnowledgeIndexer:
                         title = str(yaml_meta.get("title", title))
                         doc_type = str(yaml_meta.get("type", doc_type))
                         doc_id = str(yaml_meta.get("id", doc_id))
+                        body = parts[2].strip()
 
                 # 段落ブロックごとに Chunk 分割
-                paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+                paragraphs = [p.strip() for p in body.split("\n\n") if p.strip()]
+                if not paragraphs and body.strip():
+                    paragraphs = [body.strip()]
                 for i, para in enumerate(paragraphs):
                     chunk_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{doc_id}_{i}_{para[:30]}"))
                     chunks.append(
@@ -272,23 +327,6 @@ class QdrantKnowledgeIndexer:
 
         vector_size = len(embeddings[0])
         self._ensure_collection_exists(vector_size=vector_size)
-
-        points = []
-        for chunk, vector in zip(chunks, embeddings):
-            points.append(
-                PointStruct(
-                    id=chunk.chunk_id,
-                    vector=vector,
-                    payload={
-                        "doc_id": chunk.doc_id,
-                        "title": chunk.title,
-                        "doc_type": chunk.doc_type,
-                        "file_path": chunk.file_path,
-                        "content": chunk.content,
-                        "is_glossary": chunk.is_glossary,
-                    },
-                )
-            )
 
         # PageRank 事前計算
         pagerank_dict = self.compute_pagerank(wiki_dir=base_path)

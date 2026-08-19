@@ -14,6 +14,7 @@ class LLMConfig:
     model: str = ""
     temperature: float = 0.2
     max_tokens: int = 2048
+    timeout: float = 5.0
 
     def __post_init__(self):
         global_cfg = get_config()
@@ -33,6 +34,7 @@ class OpenAICompatibleLLMClient:
         self.client = OpenAI(
             base_url=self.config.base_url,
             api_key=self.config.api_key or "ollama",
+            timeout=self.config.timeout,
         )
 
     def generate_chat_completion(

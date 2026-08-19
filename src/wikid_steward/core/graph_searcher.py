@@ -24,6 +24,7 @@ class LightweightGraphSearchEngine(SearcherProtocol):
         wiki_dir: Path | str,
         top_k: int = 3,
         max_traversal_depth: int = 1,
+        doc_types: list[str] | None = None,
     ) -> SearchResult:
         wiki_path = Path(wiki_dir)
         if not wiki_path.exists():
@@ -49,6 +50,10 @@ class LightweightGraphSearchEngine(SearcherProtocol):
         # 1. メタデータ＆全文スコアリング
         for md_file in md_files:
             meta, body = parse_okf_frontmatter(md_file)
+            doc_type = meta.get("type")
+            if doc_types and doc_type not in doc_types:
+                continue
+
             title = meta.get("title") or md_file.stem
             description = meta.get("description") or ""
             tags = meta.get("tags") or []

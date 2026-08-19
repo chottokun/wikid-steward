@@ -237,6 +237,42 @@ def resolve(file: Path):
 
 
 @main.command()
+@click.option(
+    "--dir",
+    "-d",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path.cwd(),
+    help="Target base directory",
+)
+@click.option(
+    "--prune/--no-prune",
+    default=True,
+    help="Prune orphan points of physically deleted markdown files (default: True)",
+)
+@click.option(
+    "--collection",
+    "-c",
+    type=str,
+    default=None,
+    help="Target Qdrant collection name",
+)
+def index(dir: Path, prune: bool, collection: str | None):
+    """Index wiki/ knowledge notes into Qdrant vector database with cached PageRank"""
+    from wikid_steward.vector.indexer import QdrantKnowledgeIndexer
+
+    cfg = get_config()
+    wiki_dir = dir / cfg.paths.wiki_dir
+    click.echo(f"⚡ Indexing knowledge base at {wiki_dir} into Qdrant...")
+
+    indexer = QdrantKnowledgeIndexer(collection_name=collection)
+    try:
+        count = indexer.index_wiki_directory(wiki_dir=wiki_dir, prune=prune)
+        click.echo(f"✅ Successfully indexed {count} knowledge points into Qdrant.")
+    finally:
+        indexer.close()
+
+
+@main.command()
 @click.argument("query", type=str)
 @click.option(
     "--dir",
@@ -259,14 +295,22 @@ def resolve(file: Path):
     default="auto",
     help="Search engine backend (auto, qdrant, lightweight)",
 )
-def search(query: str, dir: Path, top_k: int, backend: str):
+@click.option(
+    "--doc-type",
+    "-t",
+    "doc_types",
+    multiple=True,
+    help="Filter search hits by OKF document types (e.g. -t Concept -t Guide)",
+)
+def search(query: str, dir: Path, top_k: int, backend: str, doc_types: tuple[str, ...]):
     """Run Graph-Augmented Search over wiki/ directory"""
     click.echo(f"🔍 Running Wiki-Graph Search ({backend}) for query: '{query}'...")
     cfg = get_config()
     wiki_dir = dir / cfg.paths.wiki_dir
 
+    filter_types = list(doc_types) if doc_types else None
     engine = create_search_engine(backend=backend)
-    result = engine.search(query=query, wiki_dir=wiki_dir, top_k=top_k)
+    result = engine.search(query=query, wiki_dir=wiki_dir, top_k=top_k, doc_types=filter_types)
 
     click.echo("\n" + "=" * 60)
     click.echo(" 📌 【メイン該当ノート (Direct Hits)】")

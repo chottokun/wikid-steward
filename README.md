@@ -96,18 +96,31 @@ uv run wikid-steward resolve wiki/concepts/sample.md
 # 自動判定 (auto) - Qdrant ベクトル検索 ＋ PageRank ブースト ＋ フォールバック
 uv run wikid-steward search "PID制御とフィードバック"
 
+# ドキュメントタイプによるスコープ絞り込み (Silver/Gold層分離)
+uv run wikid-steward search "PID制御" -t Concept -t Guide
+
 # バックエンドの明示指定 (--backend auto | qdrant | lightweight)
 uv run wikid-steward search "PID制御" --backend lightweight
 ```
 OKF メタデータ、Qdrant ベクトル類似度、事前計算 PageRank スコア、および 1-Hop `[[WikiLink]]` 巡回により、関連用語と統合回答を出力します。
 
-### 7. FastMCP サーバーの起動 (`mcp`)
+### 7. Qdrant ベクトルインデックス作成 ＆ ガベージコレクション (`index`)
+```bash
+# wiki/ 配下の全ノートをインデックス化し、削除されたファイルの孤立 Point を自動パージ
+uv run wikid-steward index
+
+# 孤立 Point のパージをスキップする場合
+uv run wikid-steward index --no-prune
+```
+夜間バッチ（Cron）や手動オンデマンド同期で、PageRank 事前計算キャッシュと Qdrant ベクトルインデックスを最新化します。
+
+### 8. FastMCP サーバーの起動 (`mcp`)
 ```bash
 uv run wikid-steward mcp
 ```
-FastMCP サーバーを起動し、Claude Desktop や各種 LLM エージェントとの対話的統合を提供します。
+FastMCP サーバーを起動し、Claude Desktop や各種 LLM エージェントとの対話的統合（`wiki://` リソース、検索・スタブ逆合成・Linter ツール）を提供します。
 
-### 7. ナレッジ健全性監査 ＆ セルフヒーリング (`lint`)
+### 9. ナレッジ健全性監査 ＆ セルフヒーリング (`lint`)
 ```bash
 # 監査およびスタブ自動起票
 uv run wikid-steward lint --auto-stub
