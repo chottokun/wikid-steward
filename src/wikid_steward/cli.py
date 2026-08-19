@@ -4,12 +4,12 @@ from pathlib import Path
 import click
 
 from wikid_steward.core.config import get_config
-from wikid_steward.core.graph_searcher import LightweightGraphSearchEngine
 from wikid_steward.core.linter import KnowledgeLinter
 from wikid_steward.core.moc_generator import generate_all_mocs
 from wikid_steward.core.resolver import resolve_git_conflict
 from wikid_steward.core.retro_compiler import RetroCompiler
 from wikid_steward.core.reviewer import review_file
+from wikid_steward.vector.searcher import create_search_engine
 from wikid_steward.watcher.daemon import start_daemon
 
 logging.basicConfig(
@@ -252,21 +252,27 @@ def resolve(file: Path):
     default=3,
     help="Top K search hits",
 )
-def search(query: str, dir: Path, top_k: int):
-    """Run lightweight Graph-Augmented Search over wiki/ directory"""
-    click.echo(f"🔍 Running Lightweight Wiki-Graph Search for query: '{query}'...")
+@click.option(
+    "--backend",
+    "-b",
+    type=click.Choice(["auto", "qdrant", "lightweight"]),
+    default="auto",
+    help="Search engine backend (auto, qdrant, lightweight)",
+)
+def search(query: str, dir: Path, top_k: int, backend: str):
+    """Run Graph-Augmented Search over wiki/ directory"""
+    click.echo(f"🔍 Running Wiki-Graph Search ({backend}) for query: '{query}'...")
     cfg = get_config()
     wiki_dir = dir / cfg.paths.wiki_dir
 
-    engine = LightweightGraphSearchEngine()
+    engine = create_search_engine(backend=backend)
     result = engine.search(query=query, wiki_dir=wiki_dir, top_k=top_k)
 
     click.echo("\n" + "=" * 60)
     click.echo(" 📌 【メイン該当ノート (Direct Hits)】")
     for i, hit in enumerate(result.main_hits, 1):
-        click.echo(
-            f" [{i}] {hit.get('title')} ({hit.get('file_path')}) - Score: {hit.get('score'):.1f}"
-        )
+        score_val = hit.get("score", 0.0)
+        click.echo(f" [{i}] {hit.get('title')} ({hit.get('file_path')}) - Score: {score_val:.2f}")
 
     if result.traversed_glossary_terms:
         click.echo("\n 🔗 【巡回抽出された WikiLink 用語 (1-Hop Traversal)】")
@@ -276,6 +282,22 @@ def search(query: str, dir: Path, top_k: int):
     click.echo("\n 💡 【LLM 統合要約回答】")
     click.echo(result.integrated_answer)
     click.echo("=" * 60 + "\n")
+
+
+@main.command()
+@click.option(
+    "--transport",
+    "-t",
+    type=click.Choice(["stdio", "sse"]),
+    default="stdio",
+    help="Transport protocol for FastMCP server",
+)
+def mcp(transport: str):
+    """Start FastMCP server for LLM integration (Claude Desktop, etc.)"""
+    from wikid_steward.mcp.server import run_mcp_server
+
+    click.echo(f"🚀 Starting FastMCP server (transport: {transport})...")
+    run_mcp_server(transport=transport)
 
 
 @main.command()

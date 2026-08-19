@@ -19,8 +19,12 @@
 * **バックリンク文脈からの「用語定義・解説レジュメ」自動逆合成 (Knowledge Retro-Compilation)**:
   * 被リンクが $N$ 件（デフォルト: `3`）以上集まった未定義用語に対し、組織内の使われ方から LLM が固有の解説ページを後追いで自動生成。
   * **AI 循環コピー汚染遮断フィルター**: 未査読の AI 下書きノートをスキャン対象から 100% 除外してハルシネーションの連鎖を防止。
-* **外部 DB 不要の「軽量構造化メタデータ & 1-Hop グラフ巡回検索」**:
-  * Qdrant 等の外部サーバーを必要とせず、OKF メタデータと `[[WikiLink]]` 接続グラフによる超高速な 1-Hop 巡回と LLM 要約回答を提供。
+* **Searcher Protocol & Qdrant ベクトル検索 ＋ PageRank ブースト ＋ 自動フォールバック**:
+  * Qdrant ベクトル DB 連携時に filelock によるプロセス間排他制御を実施。
+  * インデックス作成時に `[[WikiLink]]` 接続グラフから PageRank スコアを事前計算し Payload キャッシュ。類似度＋PageRank ブースト検索を提供。
+  * Qdrant 非依存環境や障害時には、Searcher Protocol 経由で軽量ファイルベース検索エンジンへ即座に自動フォールバック。
+* **FastMCP 連携モジュール (`wikid-steward mcp`)**:
+  * FastMCP を採用し、LLM クライアント（Claude Desktop 等）から `wiki://` リソースの閲覧やナレッジ操作ツール（`search`, `compile_stub`, `lint`, `moc` 等）を直接呼び出し可能。
 * **ネスト破綻を回避する堅牢型 WikiRelinker**:
   * コードブロック、インラインコード、数式ブロック、HTML テーブル、手書きメモ、画像パスを多層保護し、大見出し（`##`）セクションごとに初出1回のみ安全に `[[WikiLink]]` 化。
 * **Git 協調・ブランチ & PR 協調モデル**:
@@ -87,11 +91,21 @@ uv run wikid-steward resolve wiki/concepts/sample.md
 ```
 ファイル内の Git 衝突マーカー（`<<<<<<<` 等）を検知し、手書きメモを保護しながら文脈を自動マージします。
 
-### 6. 軽量 Wiki ナレッジグラフ検索 (`search`)
+### 6. Wiki ナレッジグラフ検索 (`search`)
 ```bash
+# 自動判定 (auto) - Qdrant ベクトル検索 ＋ PageRank ブースト ＋ フォールバック
 uv run wikid-steward search "PID制御とフィードバック"
+
+# バックエンドの明示指定 (--backend auto | qdrant | lightweight)
+uv run wikid-steward search "PID制御" --backend lightweight
 ```
-OKF メタデータと 1-Hop `[[WikiLink]]` 巡回により、関連用語と統合回答を高速出力します。
+OKF メタデータ、Qdrant ベクトル類似度、事前計算 PageRank スコア、および 1-Hop `[[WikiLink]]` 巡回により、関連用語と統合回答を出力します。
+
+### 7. FastMCP サーバーの起動 (`mcp`)
+```bash
+uv run wikid-steward mcp
+```
+FastMCP サーバーを起動し、Claude Desktop や各種 LLM エージェントとの対話的統合を提供します。
 
 ### 7. ナレッジ健全性監査 ＆ セルフヒーリング (`lint`)
 ```bash

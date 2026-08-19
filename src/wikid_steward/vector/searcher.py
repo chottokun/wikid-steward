@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
 
 from wikid_steward.core.config import get_config
 from wikid_steward.core.llm_client import OpenAICompatibleLLMClient
@@ -8,14 +9,115 @@ from wikid_steward.vector.indexer import QdrantKnowledgeIndexer
 
 
 @dataclass
+class SearchHit:
+    file_path: str
+    title: str
+    score: float
+    frontmatter: dict[str, Any]
+    snippet: str
+
+
+@dataclass
 class SearchResult:
     query: str
-    main_hits: list[dict]
-    traversed_glossary_terms: list[dict]
+    main_hits: list[dict[str, Any]]
+    traversed_glossary_terms: list[dict[str, Any]]
     integrated_answer: str
 
 
-class WikiGraphSearchEngine:
+@runtime_checkable
+class SearcherProtocol(Protocol):
+    """Qdrant 検索エンジンおよび軽量ファイルベース検索エンジンの共通抽象インターフェース (Searcher Protocol)"""
+
+    def search(
+        self,
+        query: str,
+        wiki_dir: Path | str,
+        top_k: int = 3,
+        max_traversal_depth: int = 1,
+    ) -> SearchResult: ...
+
+
+class FallbackSearchEngine(SearcherProtocol):
+    """Qdrant 検索エンジン (WikiGraphSearchEngine) の起動/クエリ処理が失敗した場合に
+
+    自動的に LightweightGraphSearchEngine へフォールバックする安全策プロキシエンジン。
+    """
+
+    def __init__(
+        self,
+        primary_engine: SearcherProtocol | None = None,
+        fallback_engine: SearcherProtocol | None = None,
+    ):
+        from wikid_steward.core.graph_searcher import LightweightGraphSearchEngine
+
+        self.fallback_engine = fallback_engine or LightweightGraphSearchEngine()
+        if primary_engine is not None:
+            self.primary_engine = primary_engine
+        else:
+            try:
+                self.primary_engine = WikiGraphSearchEngine()
+            except Exception as e:
+                print(
+                    f"[FallbackSearchEngine] Failed to initialize Qdrant primary engine: {e}. Falling back to Lightweight engine."
+                )
+                self.primary_engine = None
+
+    def search(
+        self,
+        query: str,
+        wiki_dir: Path | str,
+        top_k: int = 3,
+        max_traversal_depth: int = 1,
+    ) -> SearchResult:
+        if self.primary_engine is not None:
+            try:
+                res = self.primary_engine.search(query, wiki_dir, top_k, max_traversal_depth)
+                if res and res.main_hits:
+                    return res
+                print(
+                    "[FallbackSearchEngine] Primary search returned empty hits or failed. Executing fallback engine..."
+                )
+            except Exception as e:
+                print(
+                    f"[FallbackSearchEngine] Primary search failed with error: {e}. Executing fallback engine..."
+                )
+
+        return self.fallback_engine.search(query, wiki_dir, top_k, max_traversal_depth)
+
+
+def create_search_engine(
+    backend: str = "auto",
+    llm_client: OpenAICompatibleLLMClient | None = None,
+) -> SearcherProtocol:
+    """検索エンジンのファクトリ関数。backend: 'auto', 'qdrant', 'lightweight'"""
+    from wikid_steward.core.graph_searcher import LightweightGraphSearchEngine
+
+    if backend == "lightweight":
+        return LightweightGraphSearchEngine(llm_client=llm_client)
+
+    qdrant_engine = None
+    try:
+        qdrant_engine = WikiGraphSearchEngine(llm_client=llm_client)
+    except Exception as e:
+        print(f"[Search Engine Factory] Qdrant engine initialization failed: {e}")
+
+    if backend == "qdrant":
+        if qdrant_engine is not None:
+            return qdrant_engine
+        print(
+            "[Search Engine Factory] Requested 'qdrant' backend, but it failed to initialize. Falling back to Lightweight engine."
+        )
+        return LightweightGraphSearchEngine(llm_client=llm_client)
+
+    # backend == "auto"
+    lightweight_engine = LightweightGraphSearchEngine(llm_client=llm_client)
+    if qdrant_engine is None:
+        return lightweight_engine
+    return FallbackSearchEngine(primary_engine=qdrant_engine, fallback_engine=lightweight_engine)
+
+
+class WikiGraphSearchEngine(SearcherProtocol):
     """LLM-Wiki の真骨頂である
 
     「Qdrant ベクトル検索 × WikiLink グラフ巡回 × LLM 統合回答」を具現化する検索エンジン。
@@ -65,9 +167,15 @@ class WikiGraphSearchEngine:
         main_hits = []
         wikilinks_found = set()
 
+        alpha = 0.2  # PageRank ブースト重み係数
         for res in search_results:
-            payload = res.payload
-            payload["score"] = res.score
+            payload = res.payload or {}
+            pr_score = float(payload.get("pagerank_score", 0.0))
+            raw_sim = float(res.score)
+            boosted_score = raw_sim + (alpha * pr_score)
+            payload["score"] = boosted_score
+            payload["raw_similarity"] = raw_sim
+            payload["pagerank_score"] = pr_score
             main_hits.append(payload)
 
             # ヒットしたテキスト内の [[用語名]] を抽出
@@ -76,6 +184,9 @@ class WikiGraphSearchEngine:
             for term in found:
                 if len(term) >= 2:
                     wikilinks_found.add(term)
+
+        # PageRank ブースト後のスコアで再ソート
+        main_hits.sort(key=lambda x: x.get("score", 0.0), reverse=True)
 
         # クエリ単体からの用語一致も補完
         for term_candidate in query.split():
