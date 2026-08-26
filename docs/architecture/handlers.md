@@ -56,11 +56,9 @@ from wikid_steward.core.profiles import ParseProfile, ParseProfile, register_pro
 class MyCustomHandler(BaseProfileHandler):
     """【テンプレート】独自ドキュメントパターン向けカスタムハンドラー"""
 
-    def post_process_markdown(
-        self, markdown_text: str, profile_name: str
-    ) -> str:
+    def post_process_markdown(self, markdown_text: str, profile_name: str) -> str:
         """Docling がパースした Markdown 本文に対するカスタム加工ロジック"""
-        
+
         # 1. 独自テキスト抽出やフィルタリング
         extracted_info = self._analyze_custom_notes(markdown_text)
 
@@ -78,9 +76,7 @@ class MyCustomHandler(BaseProfileHandler):
         lines = [line for line in text.splitlines() if "NOTE" in line.upper()]
         return f"検出された Note 数: {len(lines)} 件"
 
-    def process_custom_assets(
-        self, conv_result: Any, assets_dir: Path
-    ) -> list[dict[str, Any]]:
+    def process_custom_assets(self, conv_result: Any, assets_dir: Path) -> list[dict[str, Any]]:
         """特殊な画像クロップやカスタムアセットメタデータを追加抽出するコード"""
         custom_assets = []
         # 必要に応じて独自アセット処理を記述

@@ -211,13 +211,14 @@ class WikiGraphSearchEngine(SearcherProtocol):
         accumulated_tokens = 0
 
         # 全 Markdown ファイルをロード（度数カウント用）
-        all_md_texts = [f.read_text(encoding="utf-8") for f in wiki_path.glob("**/*.md")]
+        lowered_md_texts = [
+            f.read_text(encoding="utf-8").lower() for f in wiki_path.glob("**/*.md")
+        ]
 
         for term in list(wikilinks_found)[:10]:
             # 度数 (Degree) の計算: 全 Vault 内での言及回数
-            degree = sum(
-                len(re.findall(re.escape(term), txt, re.IGNORECASE)) for txt in all_md_texts
-            )
+            term_lower = term.lower()
+            degree = sum(txt.count(term_lower) for txt in lowered_md_texts)
 
             # ① 度数閾値フィルター (Degree Cutoff)
             if degree >= max_hub_degree:

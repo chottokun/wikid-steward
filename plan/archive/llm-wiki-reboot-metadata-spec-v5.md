@@ -23,6 +23,7 @@ DPI（ディレクトリ階層維持）を踏襲しつつ、Markdownファイル
 import re
 import unicodedata
 
+
 def generate_slug(relative_path_no_ext: str) -> str:
     """
     _raw/ からの相対パス（拡張子除く）を一意なSlugファイル名に決定論的に変換する。
@@ -30,41 +31,41 @@ def generate_slug(relative_path_no_ext: str) -> str:
     OSの255バイト制限やURLエンコード爆発を回避するため100バイト以内で安全に切り詰める。
     """
     # 1. Unicode NFC正規化を一律適用（macOS特有のNFD濁点分解によるファイル名ドリフト・Git競合の防止） [377, 402]
-    normalized = unicodedata.normalize('NFC', relative_path_no_ext)
-    
+    normalized = unicodedata.normalize("NFC", relative_path_no_ext)
+
     # 2. パス区切り文字 (/, \) を一律アンダースコアに置換してフラット化
     normalized = normalized.replace("/", "_").replace("\\\\", "_")
-    
+
     # 3. ASCII文字をすべて小文字化（ケースインセンシティブ対応）
     normalized = normalized.lower()
-    
+
     # 4. OSのファイル名禁止文字、スペース、Obsidian/Markdownのメタ文字を一律ハイフンに置換
     # (日本語などのマルチバイト文字 \w は維持する) [377]
-    normalized = re.sub(r'[\s\:\*\?\"\<\>\|\[\]\#\^\,\;\!\&\(\)\@\.\=\+]+', '-', normalized)
-    
+    normalized = re.sub(r"[\s\:\*\?\"\<\>\|\[\]\#\^\,\;\!\&\(\)\@\.\=\+]+", "-", normalized)
+
     # 5. セパレータ文字（アンダースコア、ハイフン）の重複（連続）を1つに整理
-    normalized = re.sub(r'[-_]{2,}', '_', normalized)  # 重複セパレータのクリーンアップ
-    normalized = re.sub(r'-+', '-', normalized)
-    normalized = re.sub(r'_+', '_', normalized)
-    
+    normalized = re.sub(r"[-_]{2,}", "_", normalized)  # 重複セパレータのクリーンアップ
+    normalized = re.sub(r"-+", "-", normalized)
+    normalized = re.sub(r"_+", "_", normalized)
+
     # 6. 文字列の先頭および末尾の不要なセパレータ（ハイフン、アンダースコア）をトリミング
     normalized = normalized.strip("-_")
-    
+
     # 7. 100バイト切り詰めルール（URLエンコード爆発対策・OS 255バイト制限の絶対防御） [402, 426]
     # マルチバイト文字を文字単位で安全に切り詰めるため、1文字ずつUTF-8エンコード時のサイズを累積計算
     byte_limit = 100
     accumulated_bytes = 0
     truncated_chars = []
-    
+
     for char in normalized:
-        char_bytes = len(char.encode('utf-8'))
+        char_bytes = len(char.encode("utf-8"))
         if accumulated_bytes + char_bytes > byte_limit:
             break
         truncated_chars.append(char)
         accumulated_bytes += char_bytes
-        
+
     normalized = "".join(truncated_chars).strip("-_")
-    
+
     return normalized
 ```
 
