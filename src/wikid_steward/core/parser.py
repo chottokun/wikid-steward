@@ -117,5 +117,3 @@ class KnowledgeParser:
         return enhanced_converter.convert_to_markdown(
             input_path=path, slug=slug, assets_dir=assets_dir
         )
-
-        return self.converter.convert(path)
