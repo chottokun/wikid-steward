@@ -1,9 +1,10 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastmcp import Client
 
-from wikid_steward.mcp.server import mcp
+from wikid_steward.mcp.server import mcp, run_mcp_server
 
 
 @pytest.mark.anyio
@@ -30,3 +31,15 @@ async def test_mcp_resources_and_tools(tmp_path: Path, monkeypatch):
         # Tool test: moc
         moc_res = await client.call_tool("moc", {})
         assert moc_res.content is not None
+
+
+def test_run_mcp_server_default():
+    with patch.object(mcp, "run") as mock_run:
+        run_mcp_server()
+        mock_run.assert_called_once_with(transport="stdio")
+
+
+def test_run_mcp_server_custom_transport():
+    with patch.object(mcp, "run") as mock_run:
+        run_mcp_server("sse")
+        mock_run.assert_called_once_with(transport="sse")
