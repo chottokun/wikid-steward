@@ -14,12 +14,12 @@ tags: [docling, parser, python, direct-import]
 
 ```python
 # 設定パラメータ仕様
-do_ocr = False                          # デジタルPDFのハルシネーション防止
-do_table_structure = True               # 高精度テーブル認識
-table_structure_options.mode = "accurate" # セル結合を維持した HTML <table> 出力
-images_scale = 2.0                      # 画像解像度スケール
-generate_picture_images = True          # 図表の抽出
-generate_picture_descriptions = False   # MVPでは VLM 呼び出しを一時バイパス
+do_ocr = False  # デジタルPDFのハルシネーション防止
+do_table_structure = True  # 高精度テーブル認識
+table_structure_options.mode = "accurate"  # セル結合を維持した HTML <table> 出力
+images_scale = 2.0  # 画像解像度スケール
+generate_picture_images = True  # 図表の抽出
+generate_picture_descriptions = False  # MVPでは VLM 呼び出しを一時バイパス
 ```
 
 ## 画像リンク置換とアセット配置

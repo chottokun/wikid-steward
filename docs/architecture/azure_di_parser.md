@@ -103,27 +103,21 @@ def convert_azure_table_to_html(table) -> str:
             if (r, c) not in grid:
                 continue
             cell = grid[(r, c)]
-            
+
             tag = "th" if getattr(cell, "kind", "") == "columnHeader" or r == 0 else "td"
             attrs = []
             if cell.row_span and cell.row_span > 1:
                 attrs.append(f'rowspan="{cell.row_span}"')
             if cell.column_span and cell.column_span > 1:
                 attrs.append(f'colspan="{cell.column_span}"')
-            
+
             attr_str = (" " + " ".join(attrs)) if attrs else ""
             content_clean = cell.content.replace("\n", "<br>")
             cells_html.append(f"<{tag}{attr_str}>{content_clean}</{tag}>")
-        
+
         rows_html.append("  <tr>" + "".join(cells_html) + "</tr>")
 
-    table_html = (
-        '<table border="1">\n'
-        "<tbody>\n"
-        + "\n".join(rows_html) + "\n"
-        "</tbody>\n"
-        "</table>"
-    )
+    table_html = '<table border="1">\n<tbody>\n' + "\n".join(rows_html) + "\n</tbody>\n</table>"
     return table_html
 ```
 
@@ -177,6 +171,7 @@ from pathlib import Path
 from typing import Any
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
+
 
 class AzureDocumentIntelligenceParser:
     """Azure Document Intelligence (prebuilt-layout) を利用した
