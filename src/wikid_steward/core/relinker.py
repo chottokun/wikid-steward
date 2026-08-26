@@ -1,24 +1,13 @@
 import re
 
+from wikid_steward.core.config import DEFAULT_STOP_WORDS
 from wikid_steward.core.glossary import GlossaryTerm
 
 
 class WikiRelinker:
     """ネスト破綻・過剰リンクを100%回避するセグメント分離型 WikiLink バインダー (v7.0)"""
 
-    DEFAULT_STOP_WORDS = {
-        "AI",
-        "NLP",
-        "LLM",
-        "LLMS",
-        "DATA",
-        "OUTPUT",
-        "FILE",
-        "PDF",
-        "PAPER",
-        "MODEL",
-        "SYSTEM",
-    }
+    DEFAULT_STOP_WORDS = set(DEFAULT_STOP_WORDS)
 
     def __init__(self, stop_words: set[str] | None = None):
         self.stop_words = (

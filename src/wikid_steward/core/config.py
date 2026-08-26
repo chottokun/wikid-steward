@@ -48,22 +48,25 @@ class ProfileSetting:
     extraction_format: str = "markdown"
 
 
+DEFAULT_STOP_WORDS: list[str] = [
+    "AI",
+    "NLP",
+    "LLM",
+    "LLMS",
+    "DATA",
+    "OUTPUT",
+    "FILE",
+    "PDF",
+    "PAPER",
+    "MODEL",
+    "SYSTEM",
+]
+
+
 @dataclass
 class RelinkerSettings:
     stop_words: list[str] = field(
-        default_factory=lambda: [
-            "AI",
-            "NLP",
-            "LLM",
-            "LLMS",
-            "DATA",
-            "OUTPUT",
-            "FILE",
-            "PDF",
-            "PAPER",
-            "MODEL",
-            "SYSTEM",
-        ]
+        default_factory=lambda: list(DEFAULT_STOP_WORDS)
     )
     min_term_length: int = 3
     mode: str = "first_hit_per_section"  # "first_hit_per_section" | "all"
