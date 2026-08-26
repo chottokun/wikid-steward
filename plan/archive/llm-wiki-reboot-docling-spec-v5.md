@@ -45,6 +45,7 @@
 import os
 import shutil
 
+
 def prepare_clean_assets_dir(target_assets_dir: str):
     """
     画像を切り出す前に、対象のアセットフォルダ（assets/{Slug名}/）が既に存在する場合、
@@ -54,7 +55,7 @@ def prepare_clean_assets_dir(target_assets_dir: str):
     if os.path.exists(target_assets_dir):
         # 既存の古いアセットフォルダを丸ごと削除してクリーンに
         shutil.rmtree(target_assets_dir)
-    
+
     # 階層ごと新規に空のフォルダを作成
     os.makedirs(target_assets_dir, exist_ok=True)
 ```
@@ -92,13 +93,13 @@ pdf_options.generate_picture_images = True
 # 📌 ローカルVLM呼び出しの一時ゲート（MVPでは無効化）
 # 大判PDFから大量画像が切り出された際、VLMの逐次呼び出しによるVRAM逼迫・遅延・GPU枯渇エラーを避けるため、
 # MVPフェーズでは VLMアノテーション生成機能を明示的に False に制限する。
-pdf_options.generate_picture_descriptions = False  # VLMによる解説生成はバイパスし、高度版バックログへ延期
+pdf_options.generate_picture_descriptions = (
+    False  # VLMによる解説生成はバイパスし、高度版バックログへ延期
+)
 
 # コンバーターのインスタンス化
 converter = DocumentConverter(
-    format_options={
-        InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)
-    }
+    format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
 )
 ```
 
