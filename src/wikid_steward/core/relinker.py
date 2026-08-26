@@ -2,6 +2,24 @@ import re
 
 from wikid_steward.core.glossary import GlossaryTerm
 
+# 多層保護パターン (フロントマター, 手書きメモ全体, コードブロック, インラインコード, 数式, HTMLテーブル, HTMLコメント, 画像, 既存リンク, 見出し行)
+PROTECTED_PATTERN = re.compile(
+    r"(^---\s*\n[\s\S]*?\n---\s*$"  # フロントマター
+    r"|<!--\s*HUMAN\s+BEGIN\s*-->[\s\S]*?<!--\s*HUMAN\s+END\s*-->"  # 手書きメモ全体
+    r"|```[\s\S]*?```"  # コードブロック (mermaid, python等)
+    r"|`[^`\n]+`"  # インラインコード
+    r"|\$\$[\s\S]*?\$\$"  # ブロック数式
+    r"|\$[^\$\n]+\$"  # インライン数式
+    r"|<table[^>]*>[\s\S]*?</table>"  # HTML テーブル
+    r"|<!--[\s\S]*?-->"  # 一般 HTML コメント
+    r"|<img[^>]*>"  # img タグ
+    r"|\!\[.*?\]\(.*?\)"  # 画像マークダウン
+    r"|\[\[.*?\]\]"  # 既存 WikiLink
+    r"|(?<!!)\[[^\]\r\n]+\]\([^)\r\n]+\)"  # 既存 Markdown リンク
+    r"|^#+ .*?$)",  # 見出し行
+    re.MULTILINE | re.IGNORECASE,
+)
+
 
 class WikiRelinker:
     """ネスト破綻・過剰リンクを100%回避するセグメント分離型 WikiLink バインダー (v7.0)"""
@@ -69,27 +87,9 @@ class WikiRelinker:
 
         term_pattern = self._build_term_pattern(sorted_aliases)
 
-        # 多層保護パターン (フロントマター, 手書きメモ全体, コードブロック, インラインコード, 数式, HTMLテーブル, HTMLコメント, 画像, 既存リンク, 見出し行)
-        protected_pattern = re.compile(
-            r"(^---\s*\n[\s\S]*?\n---\s*$"  # フロントマター
-            r"|<!--\s*HUMAN\s+BEGIN\s*-->[\s\S]*?<!--\s*HUMAN\s+END\s*-->"  # 手書きメモ全体
-            r"|```[\s\S]*?```"  # コードブロック (mermaid, python等)
-            r"|`[^`\n]+`"  # インラインコード
-            r"|\$\$[\s\S]*?\$\$"  # ブロック数式
-            r"|\$[^\$\n]+\$"  # インライン数式
-            r"|<table[^>]*>[\s\S]*?</table>"  # HTML テーブル
-            r"|<!--[\s\S]*?-->"  # 一般 HTML コメント
-            r"|<img[^>]*>"  # img タグ
-            r"|\!\[.*?\]\(.*?\)"  # 画像マークダウン
-            r"|\[\[.*?\]\]"  # 既存 WikiLink
-            r"|(?<!!)\[[^\]\r\n]+\]\([^)\r\n]+\)"  # 既存 Markdown リンク
-            r"|^#+ .*?$)",  # 見出し行
-            re.MULTILINE | re.IGNORECASE,
-        )
-
         segments: list[tuple[str, str]] = []
         last_idx = 0
-        for match in protected_pattern.finditer(text):
+        for match in PROTECTED_PATTERN.finditer(text):
             start, end = match.span()
             if start > last_idx:
                 segments.append(("text", text[last_idx:start]))
