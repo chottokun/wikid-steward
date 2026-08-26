@@ -1,8 +1,10 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from wikid_steward.core.okf_converter import parse_okf_frontmatter
-from wikid_steward.core.resolver import resolve_git_conflict
+from wikid_steward.core.resolver import has_git_conflict, resolve_git_conflict
 from wikid_steward.core.reviewer import review_file
 
 
@@ -77,3 +79,57 @@ AIが更新した内容B
     assert "=======" not in content
     assert ">>>>>>>" not in content
     assert "現場メモ: 衝突なし" in content
+
+
+@pytest.mark.parametrize(
+    "content, expected",
+    [
+        # 正常な Git コンフリクトマーカー
+        (
+            "<<<<<<< HEAD\nOurs\n=======\nTheirs\n>>>>>>> main\n",
+            True,
+        ),
+        # 文脈中に含まれる正常な Git コンフリクトマーカー
+        (
+            "# Heading\n\n<<<<<<< HEAD\nText A\n=======\nText B\n>>>>>>> feature/branch\n\nFooter",
+            True,
+        ),
+        # 空セクションのコンフリクトマーカー
+        (
+            "<<<<<<<\n=======\n>>>>>>>\n",
+            True,
+        ),
+        # コンフリクトマーカーなしの通常の文章
+        (
+            "# Hello World\nThis is clean content with no conflict.",
+            False,
+        ),
+        # 空文字列
+        (
+            "",
+            False,
+        ),
+        # 不完全なコンフリクトマーカー: <<<<<<< のみ
+        (
+            "<<<<<<< HEAD\nOurs\n",
+            False,
+        ),
+        # 不完全なコンフリクトマーカー: ======= のみ
+        (
+            "=======\n",
+            False,
+        ),
+        # 不完全なコンフリクトマーカー: >>>>>>> のみ
+        (
+            ">>>>>>> branch\n",
+            False,
+        ),
+        # 不完全なコンフリクトマーカー: <<<<<<< と ======= のみ
+        (
+            "<<<<<<< HEAD\nOurs\n=======\nTheirs\n",
+            False,
+        ),
+    ],
+)
+def test_has_git_conflict(content: str, expected: bool) -> None:
+    assert has_git_conflict(content) is expected
