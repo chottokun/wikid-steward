@@ -14,39 +14,46 @@ from wikid_steward.core.okf_converter import (
 from wikid_steward.core.slug import generate_slug
 
 
-def calculate_string_similarity(s1: str, s2: str) -> float:
-    """ひらがな・カタカナ正規化と Levenshtein / SequenceMatcher を併用した高精度類似度計算"""
+def _normalize_string(s: str) -> str:
+    """ひらがな (U+3041〜U+3096) を カタカナ (U+30A1〜U+30F6) に変換 (差分: +0x60)"""
+    return "".join(
+        chr(ord(c) + 0x60) if "\u3041" <= c <= "\u3096" else c for c in s.lower().strip()
+    )
 
-    def _normalize(s: str) -> str:
-        # ひらがな (U+3041〜U+3096) を カタカナ (U+30A1〜U+30F6) に変換 (差分: +0x60)
-        return "".join(
-            chr(ord(c) + 0x60) if "\u3041" <= c <= "\u3096" else c for c in s.lower().strip()
-        )
 
-    n1, n2 = _normalize(s1), _normalize(s2)
+def calculate_normalized_similarity(n1: str, n2: str) -> float:
+    """正規化済み文字列同士の類似度計算"""
     if n1 == n2:
+        return 1.0
+
+    len1, len2 = len(n1), len(n2)
+    max_len = max(len1, len2)
+    if max_len == 0:
         return 1.0
 
     ratio_seq = difflib.SequenceMatcher(None, n1, n2).ratio()
 
-    len1, len2 = len(n1), len(n2)
-    if max(len1, len2) == 0:
-        return 1.0
-
-    dp = [[0] * (len2 + 1) for _ in range(len1 + 1)]
-    for i in range(len1 + 1):
-        dp[i][0] = i
-    for j in range(len2 + 1):
-        dp[0][j] = j
+    # 1D 配列を用いた DP による Levenshtein 距離計算（メモリ削減・高速化）
+    prev = list(range(len2 + 1))
+    curr = [0] * (len2 + 1)
     for i in range(1, len1 + 1):
+        curr[0] = i
+        c1 = n1[i - 1]
         for j in range(1, len2 + 1):
-            cost = 0 if n1[i - 1] == n2[j - 1] else 1
-            dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
-    dist = dp[len1][len2]
-    max_len = max(len1, len2)
+            cost = 0 if c1 == n2[j - 1] else 1
+            curr[j] = min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
+        prev, curr = curr, prev
+
+    dist = prev[len2]
     ratio_lev = (max_len - dist) / max_len
 
     return max(ratio_seq, ratio_lev)
+
+
+def calculate_string_similarity(s1: str, s2: str) -> float:
+    """ひらがな・カタカナ正規化と Levenshtein / SequenceMatcher を併用した高精度類似度計算"""
+    n1, n2 = _normalize_string(s1), _normalize_string(s2)
+    return calculate_normalized_similarity(n1, n2)
 
 
 @dataclass
@@ -181,12 +188,29 @@ class KnowledgeLinter:
                     missing_wikilinks[term].append(rel_file)
 
         # 3. 未定義 WikiLink に対するタイポサジェストとスタブ起票
+        # 既存タイトルの正規化情報を事前計算 (O(M) 事前処理)
+        normalized_existing = [
+            (t, _normalize_string(t), len(_normalize_string(t)), t.lower()) for t in all_titles
+        ]
+
         for missing_term, referrers in missing_wikilinks.items():
             # タイポあいまいマッチング (類似度 >= 0.75 の候補を検索)
             typo_candidates = []
-            for exist_title in all_titles:
-                ratio = calculate_string_similarity(missing_term, exist_title)
-                if ratio >= 0.75 and missing_term.lower() != exist_title.lower():
+            norm_m = _normalize_string(missing_term)
+            len_m = len(norm_m)
+            missing_lower = missing_term.lower()
+
+            for exist_title, norm_e, len_e, exist_lower in normalized_existing:
+                if missing_lower == exist_lower:
+                    continue
+                # 長さフィルター: 最大長に対して短すぎる場合は類似度 0.75 以上になり得ない
+                max_len = len_m if len_m > len_e else len_e
+                if max_len > 0:
+                    min_len = len_e if len_m > len_e else len_m
+                    if min_len * 5 < max_len * 3:
+                        continue
+                ratio = calculate_normalized_similarity(norm_m, norm_e)
+                if ratio >= 0.75:
                     typo_candidates.append(exist_title)
 
             if typo_candidates:
