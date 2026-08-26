@@ -60,11 +60,22 @@ class BacklinkContext:
     frontmatter: dict[str, Any]
 
 
+@dataclass
+class _FileCacheEntry:
+    mtime_ns: int
+    meta: dict[str, Any]
+    source_title: str
+    lines: list[str]
+    parsed_terms: list[list[tuple[str, str]]]
+    is_trusted: bool
+
+
 class BacklinkCollector:
     """wiki/ ディレクトリ全体の被リンクを有向グラフとして集約し、重複排除と文脈抽出を行う"""
 
     def __init__(self, wiki_dir: Path | str):
         self.wiki_dir = Path(wiki_dir)
+        self._cache: dict[Path, _FileCacheEntry] = {}
 
     def find_backlinks(
         self, target_term: str, filter_untrusted: bool = True
@@ -82,20 +93,45 @@ class BacklinkCollector:
             if "stubs" in md_file.parts:
                 continue
 
-            meta, body = parse_okf_frontmatter(md_file)
-            if filter_untrusted and not is_trusted_context_source(meta):
+            try:
+                mtime_ns = md_file.stat().st_mtime_ns
+            except OSError:
                 continue
 
-            source_title = meta.get("title") or md_file.stem
-            lines = body.splitlines()
-            matching_snippets: list[str] = []
+            cache_entry = self._cache.get(md_file)
+            if cache_entry is None or cache_entry.mtime_ns != mtime_ns:
+                meta, body = parse_okf_frontmatter(md_file)
+                source_title = str(meta.get("title") or md_file.stem)
+                lines = body.splitlines()
+                parsed_terms: list[list[tuple[str, str]]] = []
+                for line in lines:
+                    matches = wikilink_pattern.findall(line)
+                    line_terms: list[tuple[str, str]] = []
+                    for m in matches:
+                        term = m.split("|", 1)[0].strip()
+                        line_terms.append((term, generate_slug(term)))
+                    parsed_terms.append(line_terms)
 
-            for i, line in enumerate(lines):
-                matches = wikilink_pattern.findall(line)
+                cache_entry = _FileCacheEntry(
+                    mtime_ns=mtime_ns,
+                    meta=meta,
+                    source_title=source_title,
+                    lines=lines,
+                    parsed_terms=parsed_terms,
+                    is_trusted=is_trusted_context_source(meta),
+                )
+                self._cache[md_file] = cache_entry
+
+            if filter_untrusted and not cache_entry.is_trusted:
+                continue
+
+            matching_snippets: list[str] = []
+            lines = cache_entry.lines
+
+            for i, line_terms in enumerate(cache_entry.parsed_terms):
                 hit = False
-                for m in matches:
-                    term = m.split("|", 1)[0].strip()
-                    if term == target_term or generate_slug(term) == target_slug:
+                for term, term_slug in line_terms:
+                    if term == target_term or term_slug == target_slug:
                         hit = True
                         break
 
@@ -112,9 +148,9 @@ class BacklinkCollector:
                 results.append(
                     BacklinkContext(
                         source_file=md_file,
-                        source_title=source_title,
+                        source_title=cache_entry.source_title,
                         context_snippet=combined_snippet,
-                        frontmatter=meta,
+                        frontmatter=cache_entry.meta,
                     )
                 )
 
