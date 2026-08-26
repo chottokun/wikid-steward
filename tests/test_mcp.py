@@ -2,8 +2,9 @@ from pathlib import Path
 
 import pytest
 from fastmcp import Client
+from mcp.shared.exceptions import McpError
 
-from wikid_steward.mcp.server import mcp
+from wikid_steward.mcp.server import get_wiki_resource, mcp
 
 
 @pytest.mark.anyio
@@ -30,3 +31,27 @@ async def test_mcp_resources_and_tools(tmp_path: Path, monkeypatch):
         # Tool test: moc
         moc_res = await client.call_tool("moc", {})
         assert moc_res.content is not None
+
+        # Resource test: access denied via MCP client
+        with pytest.raises(McpError, match="Access denied"):
+            await client.read_resource("wiki://%2E%2E%2F%2E%2E%2Fetc%2Fpasswd")
+
+
+def test_get_wiki_resource_access_denied(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wiki_dir = tmp_path / "wiki"
+    wiki_dir.mkdir()
+
+    with pytest.raises(
+        ValueError, match="Access denied: path '../../etc/passwd' is outside wiki directory"
+    ):
+        get_wiki_resource("../../etc/passwd")
+
+
+def test_get_wiki_resource_not_found(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wiki_dir = tmp_path / "wiki"
+    wiki_dir.mkdir()
+
+    with pytest.raises(FileNotFoundError, match="Resource not found: nonexistent.md"):
+        get_wiki_resource("nonexistent.md")
