@@ -70,3 +70,16 @@ def test_qdrant_indexer_and_graph_search(tmp_path: Path):
     assert len(result.traversed_glossary_terms) > 0
     assert result.traversed_glossary_terms[0]["term"] == "LLM-as-a-judge"
     assert "LLM-as-a-judge" in result.integrated_answer or "評価" in result.integrated_answer
+
+
+def test_openai_compatible_embedding_client_api_key_handling():
+    # 1. api_key が明示された場合のテスト
+    client_custom = OpenAICompatibleEmbeddingClient(api_key="custom-api-key")
+    assert client_custom.api_key == "custom-api-key"
+    assert client_custom.client.api_key == "custom-api-key"
+
+    # 2. api_key 未指定（None）の場合のテスト
+    client_default = OpenAICompatibleEmbeddingClient()
+    # デフォルト設定から決定された api_key（設定未指定時は空文字または設定値）であることを確認
+    assert isinstance(client_default.api_key, str)
+    assert client_default.client.api_key == (client_default.api_key or "ollama")

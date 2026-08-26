@@ -34,13 +34,16 @@ class OpenAICompatibleEmbeddingClient:
     def __init__(
         self,
         base_url: str = "http://localhost:11434/v1",
-        api_key: str = "ollama",
+        api_key: str | None = None,
         model: str = "bge-small-en",
     ):
         self.base_url = base_url
-        self.api_key = api_key
+        cfg = get_config()
+        self.api_key = (
+            api_key if api_key is not None else (cfg.vector_db.embedding_api_key or cfg.llm.api_key)
+        )
         self.model = model
-        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key)
+        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key or "ollama")
 
     def embed_texts(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         """テキストのリストからバッチ処理で埋め込みベクトルを生成する"""
